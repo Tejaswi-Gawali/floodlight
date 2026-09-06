@@ -587,6 +587,22 @@
   .celebration-text.four{color:#e2564f;}
   .celebration-text.six{color:#e7b84a;}
   .celebration-text.wicket{color:#ff5252;}
+  .replay-badge{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:11;
+    background:#c81f2f;color:#fff;font-family:"Teko",sans-serif;font-size:16px;
+    letter-spacing:0.1em;text-transform:uppercase;padding:3px 16px;border-radius:20px;
+    opacity:0;pointer-events:none;box-shadow:0 3px 10px rgba(0,0,0,0.4);
+  }
+  .replay-badge.show{animation:replay-fade 2.4s ease-out;}
+  @keyframes replay-fade{
+    0%{opacity:0;transform:translateX(-50%) translateY(-6px);}
+    15%{opacity:1;transform:translateX(-50%) translateY(0);}
+    85%{opacity:1;}
+    100%{opacity:0;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .replay-badge.show{animation-duration:1.2s !important;}
+  }
   .confetti-wrap{position:absolute;inset:0;overflow:hidden;}
   .confetti{
     position:absolute;width:7px;height:13px;top:50%;left:50%;border-radius:1px;
@@ -855,6 +871,7 @@
       <button class="sport-tab" data-sport="football"><span class="swatch" style="color:var(--sky);"></span>Football</button>
     </div>
     <div class="topbar-actions">
+      <button class="icon-btn square" id="soundBtn" title="Toggle celebration sound" aria-label="Toggle celebration sound">🔇</button>
       <button class="icon-btn" id="overlayBtn">Stream overlay</button>
       <button class="icon-btn square" id="settingsBtn" title="Data source settings" aria-label="Data source settings">⚙</button>
       <button class="icon-btn square" id="exitOverlayBtn" hidden title="Exit overlay preview" aria-label="Exit overlay preview">✕</button>
@@ -933,6 +950,7 @@
           <div class="confetti-wrap" id="confettiWrap"></div>
           <div class="celebration-text" id="celebrationText"></div>
         </div>
+        <div class="replay-badge" id="replayBadge">Replay</div>
       </div>
 
       <div class="bcast-players-row">
@@ -1438,8 +1456,81 @@
     }, 3000);
   }
 
+  var audioCtx = null;
+  var soundEnabled = false;
+  try { soundEnabled = localStorage.getItem("floodlight_sound") === "1"; } catch(e){}
+
+  function ensureAudioCtx(){
+    if(!audioCtx){
+      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; }
+    }
+    if(audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function playTone(freq, duration, waveType, gainPeak, delay){
+    var ctx = ensureAudioCtx(); if(!ctx) return;
+    var t0 = ctx.currentTime + (delay||0);
+    var osc = ctx.createOscillator(); osc.type = waveType || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(gainPeak||0.25, t0+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+duration);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0+duration+0.05);
+  }
+
+  function playNoiseBurst(duration, filterFreq, gainPeak, delay){
+    var ctx = ensureAudioCtx(); if(!ctx) return;
+    var t0 = ctx.currentTime + (delay||0);
+    var bufferSize = Math.floor(ctx.sampleRate * duration);
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for(var i=0;i<bufferSize;i++){ data[i] = Math.random()*2-1; }
+    var noise = ctx.createBufferSource(); noise.buffer = buffer;
+    var filter = ctx.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = filterFreq;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(gainPeak, t0+0.06);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+duration);
+    noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    noise.start(t0); noise.stop(t0+duration+0.05);
+  }
+
+  function playCelebrationSound(type){
+    if(!soundEnabled) return;
+    if(type === "four"){
+      playTone(660,0.18,"triangle",0.22,0);
+      playTone(880,0.22,"triangle",0.22,0.12);
+      playNoiseBurst(0.8, 1200, 0.12, 0);
+    } else if(type === "six"){
+      playTone(523,0.2,"sawtooth",0.18,0);
+      playTone(784,0.25,"sawtooth",0.2,0.1);
+      playTone(1046,0.3,"triangle",0.18,0.2);
+      playNoiseBurst(1.6, 1500, 0.2, 0);
+    } else if(type === "wicket"){
+      playTone(180,0.4,"square",0.22,0);
+      playTone(120,0.5,"square",0.18,0.15);
+      playNoiseBurst(1.0, 800, 0.15, 0);
+    }
+  }
+
+  function playReplaySequence(type){
+    var badge = $("replayBadge");
+    if(badge){
+      badge.classList.remove("show");
+      void badge.offsetWidth;
+      badge.classList.add("show");
+    }
+    boomLastBall(type);
+  }
+
   function triggerCelebration(type){
     boomLastBall(type);
+    playCelebrationSound(type);
+    clearTimeout(window.__floodlightReplayTimer);
+    window.__floodlightReplayTimer = setTimeout(function(){ playReplaySequence(type); }, 5300);
     var wrap = $("celebration");
     var textEl = $("celebrationText");
     var confettiWrap = $("confettiWrap");
@@ -1996,6 +2087,21 @@
     document.body.classList.toggle("overlay-mode", on);
     $("exitOverlayBtn").hidden = !on;
   }
+  function updateSoundBtn(){
+    $("soundBtn").textContent = soundEnabled ? "🔊" : "🔇";
+    $("soundBtn").title = soundEnabled ? "Mute celebration sound" : "Unmute celebration sound";
+  }
+  updateSoundBtn();
+  $("soundBtn").addEventListener("click", function(){
+    soundEnabled = !soundEnabled;
+    try { localStorage.setItem("floodlight_sound", soundEnabled ? "1" : "0"); } catch(e){}
+    updateSoundBtn();
+    if(soundEnabled){
+      ensureAudioCtx();
+      playTone(660, 0.12, "triangle", 0.2, 0);
+    }
+  });
+
   $("overlayBtn").addEventListener("click", function(){ applyOverlay(true); });
 
   $("previewFourBtn").addEventListener("click", function(){ if(activeSport==="cricket") triggerCelebration("four"); });
