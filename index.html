@@ -1708,6 +1708,27 @@
       '</svg>';
   }
 
+  var COUNTRY_FLAGS = {
+    "india":"in","pakistan":"pk","australia":"au","england":"gb-eng","new zealand":"nz",
+    "south africa":"za","sri lanka":"lk","bangladesh":"bd","afghanistan":"af","zimbabwe":"zw",
+    "ireland":"ie","scotland":"gb-sct","wales":"gb-wls","netherlands":"nl","nepal":"np",
+    "united arab emirates":"ae","uae":"ae","united states":"us","usa":"us","united states of america":"us",
+    "oman":"om","namibia":"na","canada":"ca","papua new guinea":"pg","thailand":"th","japan":"jp",
+    "china":"cn","hong kong":"hk","malaysia":"my","singapore":"sg","kenya":"ke","uganda":"ug",
+    "bermuda":"bm","jersey":"je","germany":"de","italy":"it","spain":"es","france":"fr",
+    "denmark":"dk","norway":"no","israel":"il","qatar":"qa","kuwait":"kw","saudi arabia":"sa",
+    "bahrain":"bh","brazil":"br","argentina":"ar","vanuatu":"vu","fiji":"fj","samoa":"ws"
+  };
+  function countryFlagUrl(name){
+    if(!name) return null;
+    var n = String(name).toLowerCase().trim()
+      .replace(/\s*\b(women|men|w|u-?23|u-?19|under-?23|under-?19|xi|emerging|academy|a)\b\s*$/i, "")
+      .trim();
+    var code = COUNTRY_FLAGS[n];
+    if(!code) return null;
+    return "https://cdn.jsdelivr.net/gh/HatScripts/circle-flags@gh-pages/flags/" + code + ".svg";
+  }
+
   function renderTeamBadge(el, code, imgUrl){
     if(imgUrl){
       el.innerHTML = "";
@@ -1728,11 +1749,11 @@
     var codeA = (infoA && infoA.shortname) || teamCode(m.battingNow || m.teamA);
     var codeB = (infoB && infoB.shortname) || teamCode(bowlingTeam);
 
-    renderTeamBadge($("bcBadgeA"), codeA.slice(0,2), infoA && infoA.img);
+    renderTeamBadge($("bcBadgeA"), codeA.slice(0,2), (infoA && infoA.img) || countryFlagUrl(m.battingNow || m.teamA));
     pulseText($("bcScoreA"), m.score.runs + "-" + m.score.wkts);
     pulseText($("bcOversA"), m.score.overs);
 
-    renderTeamBadge($("bcBadgeB"), codeB.slice(0,2), infoB && infoB.img);
+    renderTeamBadge($("bcBadgeB"), codeB.slice(0,2), (infoB && infoB.img) || countryFlagUrl(bowlingTeam));
     $("bcOversB").textContent = "0";
 
     var lastBall = m._lastBallValue || ((m.thisOver && m.thisOver.length) ? m.thisOver[m.thisOver.length-1] : "—");
