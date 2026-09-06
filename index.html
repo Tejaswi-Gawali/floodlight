@@ -733,15 +733,26 @@
     border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:7px 0;
   }
   .ticker-track{display:inline-flex;}
-  .ticker-track span{
+  .ticker-track > span{
     font-family:"Teko",sans-serif;font-size:15px;color:#fff;letter-spacing:0.03em;
     padding-right:60px;flex-shrink:0;
   }
+  .tk-sep{color:var(--text-faint);margin:0 14px;font-weight:400;}
+  .tk-live{color:var(--live);font-weight:700;letter-spacing:0.06em;}
+  .tk-teams{color:#fff;}
+  .tk-score{color:var(--six);}
+  .tk-score .tk-overs{color:var(--text-dim);font-size:13px;}
+  .tk-crr{color:#9fe8d4;}
+  .tk-crr b, .tk-rrr b{color:#fff;font-weight:700;}
+  .tk-rrr{color:var(--six);}
+  .tk-need{color:var(--accent);font-weight:700;}
+  .tk-target{color:var(--six);}
+  .tk-pship{color:var(--sky);}
   .ticker-track{animation:ticker-scroll 26s linear infinite;}
   @keyframes ticker-scroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
   @media (prefers-reduced-motion: reduce){
     .ticker-track{animation:none;}
-    .ticker-track span:last-child{display:none;}
+    .ticker-track > span:last-child{display:none;}
     .bcast-ticker{text-overflow:ellipsis;}
   }
   .bcast-player-card.new-player{animation:card-slide-in 0.6s ease;}
@@ -1464,23 +1475,23 @@
   function updateTicker(m){
     var t1 = $("tickerContent1"), t2 = $("tickerContent2");
     if(!t1 || !t2) return;
-    var bowlingTeam = (m.teamA===m.battingNow) ? m.teamB : m.teamA;
     var parts = [
-      "🔴 LIVE",
-      m.teamA + " vs " + m.teamB,
-      m.score.runs + "/" + m.score.wkts + " (" + m.score.overs + ")",
-      "CRR " + (m.crr||0).toFixed(2)
+      '<span class="tk-live">🔴 LIVE</span>',
+      '<span class="tk-teams">' + esc(m.teamA) + ' vs ' + esc(m.teamB) + '</span>',
+      '<span class="tk-score">' + m.score.runs + '/' + m.score.wkts + ' <span class="tk-overs">(' + m.score.overs + ')</span></span>',
+      '<span class="tk-crr">CRR <b>' + (m.crr||0).toFixed(2) + '</b></span>'
     ];
-    if(m.rrr) parts.push("RRR " + m.rrr.toFixed(2));
+    if(m.rrr) parts.push('<span class="tk-rrr">RRR <b>' + m.rrr.toFixed(2) + '</b></span>');
     if(m.target && m.ballsRemaining){
-      parts.push(teamCode(m.battingNow) + " NEED " + Math.max(m.target - m.score.runs,0) + " RUNS FROM " + m.ballsRemaining + " BALLS");
+      parts.push('<span class="tk-need">' + esc(teamCode(m.battingNow)) + ' NEED ' + Math.max(m.target - m.score.runs,0) + ' RUNS FROM ' + m.ballsRemaining + ' BALLS</span>');
     } else if(m.target){
-      parts.push("TARGET " + m.target);
+      parts.push('<span class="tk-target">TARGET ' + m.target + '</span>');
     }
-    if(m.partnership) parts.push("PARTNERSHIP " + m.partnership.runs + "(" + m.partnership.balls + ")");
-    var text = parts.join("  •  ") + "   ";
-    t1.textContent = text;
-    t2.textContent = text;
+    if(m.partnership) parts.push('<span class="tk-pship">PARTNERSHIP ' + m.partnership.runs + '(' + m.partnership.balls + ')</span>');
+    var sep = '<span class="tk-sep">•</span>';
+    var html = parts.join(sep) + sep;
+    t1.innerHTML = html;
+    t2.innerHTML = html;
   }
 
   var lastKnownPlayerName = {};
