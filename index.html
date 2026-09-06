@@ -1329,9 +1329,7 @@
 
   var SKIN_TONES = ["#f0d2a8","#e3b98f","#c9976a","#8a5a34","#5c3a22"];
   var NAVY_SHADES = ["#0f1b33","#14213d","#1b2a4a","#152238"];
-  var CAP_COLORS = ["#123a63","#7a1420","#1f4f2e","#4a2e63","#2e5a63"];
-  var HAIR_COLORS = ["#1a1512","#2e2016","#3d2b1f","#241e1a","#4a4238"];
-  var BEARD_STYLES = ["none","stubble","full","mustache"];
+  var CAP_COLORS = ["#f2ede0","#e8e2d0","#eee9dc","#efe8d8"];
 
   function playerAvatarSVG(name, role){
     if(!name || name==="—"){
@@ -1339,48 +1337,37 @@
     }
     var h = hashStr(name);
     var skin = SKIN_TONES[h % SKIN_TONES.length];
-    var hair = HAIR_COLORS[(h >> 3) % HAIR_COLORS.length];
-    var beard = BEARD_STYLES[(h >> 5) % BEARD_STYLES.length];
     var isBowler = role === "bowl";
     var kit = isBowler ? CAP_COLORS[(h >> 2) % CAP_COLORS.length] : NAVY_SHADES[(h >> 2) % NAVY_SHADES.length];
     var gid = "mg" + h;
 
-    var beardMarkup = "";
-    if(beard === "stubble"){
-      beardMarkup = '<path d="M20 33 Q20 45 32 46 Q44 45 44 33 Q44 40 32 41 Q20 40 20 33 Z" fill="'+hair+'" opacity="0.28"/>';
-    } else if(beard === "full"){
-      beardMarkup = '<path d="M19 32 Q19 46 32 47 Q45 46 45 32 Q45 40 32 41 Q19 40 19 32 Z" fill="'+hair+'" opacity="0.82"/>';
-    } else if(beard === "mustache"){
-      beardMarkup = '<rect x="27" y="34.5" width="10" height="1.8" rx="0.9" fill="'+hair+'" opacity="0.85"/>';
-    }
-
     var svg = '<svg class="avatar-photo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">' +
-      '<defs><radialGradient id="'+gid+'" cx="12%" cy="8%" r="80%">' +
-        '<stop offset="0%" stop-color="#d1508f" stop-opacity="0.6"/>' +
-        '<stop offset="55%" stop-color="#7a1f5c" stop-opacity="0.18"/>' +
-        '<stop offset="100%" stop-color="#10141a" stop-opacity="0"/>' +
+      '<defs><radialGradient id="'+gid+'a" cx="6%" cy="10%" r="45%">' +
+        '<stop offset="0%" stop-color="#eaf2ff" stop-opacity="0.9"/>' +
+        '<stop offset="100%" stop-color="#eaf2ff" stop-opacity="0"/>' +
+      '</radialGradient>' +
+      '<radialGradient id="'+gid+'b" cx="94%" cy="10%" r="45%">' +
+        '<stop offset="0%" stop-color="#eaf2ff" stop-opacity="0.9"/>' +
+        '<stop offset="100%" stop-color="#eaf2ff" stop-opacity="0"/>' +
       '</radialGradient></defs>' +
-      '<rect width="64" height="64" fill="#10141a"/>' +
-      '<rect width="64" height="64" fill="url(#'+gid+')"/>' +
-      '<path d="M6 64 Q32 47 58 64 Z" fill="#ede4cd"/>' +
-      '<path d="M27 50 L32 57 L37 50 L32 53 Z" fill="#8a8060" opacity="0.4"/>' +
+      '<rect width="64" height="64" fill="#0c1220"/>' +
+      '<rect width="64" height="64" fill="url(#'+gid+'a)"/>' +
+      '<rect width="64" height="64" fill="url(#'+gid+'b)"/>' +
+      '<path d="M6 64 Q32 47 58 64 Z" fill="#f5f5f0"/>' +
       '<rect x="27" y="41" width="10" height="11" fill="'+skin+'"/>' +
-      '<circle cx="32" cy="31" r="14" fill="'+skin+'"/>' +
-      beardMarkup;
+      '<path d="M20 31 Q20 48 32 49 Q44 48 44 31 Q44 20 32 19 Q20 20 20 31 Z" fill="'+skin+'"/>';
 
     if(isBowler){
       svg +=
         '<path d="M17 28 A15 15 0 0 1 47 28 Q47 15 32 14 Q17 15 17 28 Z" fill="'+kit+'"/>' +
         '<ellipse cx="19" cy="27.5" rx="7" ry="3" fill="'+kit+'"/>' +
-        '<circle cx="32" cy="13.5" r="1.6" fill="'+kit+'"/>' +
-        '<path d="M17 27 Q15.5 23 17.5 19" stroke="'+hair+'" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
-        '<path d="M47 27 Q48.5 23 46.5 19" stroke="'+hair+'" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        '<circle cx="32" cy="13.5" r="1.6" fill="'+kit+'"/>';
     } else {
       svg +=
         '<path d="M13 32 A19 20 0 0 1 51 32 Q51 11 32 9 Q13 11 13 32 Z" fill="'+kit+'"/>' +
         '<path d="M13 32 Q10.5 37 14.5 43.5" stroke="'+kit+'" stroke-width="6" fill="none" stroke-linecap="round"/>' +
         '<path d="M51 32 Q53.5 37 49.5 43.5" stroke="'+kit+'" stroke-width="6" fill="none" stroke-linecap="round"/>' +
-        '<path d="M15 30.5 Q32 24 49 30.5 L48 27 Q32 21.5 16 27 Z" fill="#0a0e13"/>' +
+        '<rect x="29" y="8.5" width="6" height="4" rx="1.5" fill="'+kit+'"/>' +
         '<path d="M17 30 A15.5 4.5 0 0 1 47 30 L46.5 43 A15.5 6 0 0 1 17.5 43 Z" fill="none" stroke="#c7d1d8" stroke-width="1.4"/>' +
         '<g stroke="#c7d1d8" stroke-width="1.2">' +
           '<line x1="20.5" y1="31" x2="21.5" y2="42"/>' +
@@ -1388,15 +1375,10 @@
           '<line x1="32" y1="32" x2="32" y2="43.5"/>' +
           '<line x1="39" y1="31.5" x2="38.5" y2="43"/>' +
           '<line x1="43.5" y1="31" x2="42.5" y2="42"/>' +
-        '</g>' +
-        '<rect x="29" y="8.5" width="6" height="4" rx="1.5" fill="'+kit+'"/>';
+        '</g>';
     }
 
-    svg +=
-      '<circle cx="27" cy="31.5" r="1.4" fill="#241a10"/>' +
-      '<circle cx="37" cy="31.5" r="1.4" fill="#241a10"/>' +
-      '<path d="M27 38 Q32 41 37 38" stroke="#6b4a30" stroke-width="1.5" fill="none" stroke-linecap="round"/>' +
-      '</svg>';
+    svg += '</svg>';
     return svg;
   }
 
