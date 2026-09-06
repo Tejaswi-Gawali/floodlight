@@ -718,42 +718,89 @@
   .bcast-brand span b{color:var(--live);font-family:"Work Sans",sans-serif;font-weight:700;letter-spacing:0;}
 
   .bcast-commentary{
-    display:flex;align-items:baseline;gap:8px;
-    background:linear-gradient(90deg,#0a1220,#0d1f30);
+    position:relative;overflow:hidden;
+    background:linear-gradient(135deg,#0a1220,#0d1f30);
     border:1px solid rgba(255,255,255,0.1);border-radius:9px;
-    padding:8px 14px;font-family:"Work Sans",sans-serif;font-size:13px;color:var(--text-dim);
-    font-style:italic;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    padding:12px 16px 14px;font-family:"Work Sans",sans-serif;color:var(--text-dim);
+    min-height:92px;
   }
   .commentary-tag{
-    flex-shrink:0;font-family:"Work Sans",sans-serif;font-size:10px;font-weight:700;
-    letter-spacing:0.08em;text-transform:uppercase;color:var(--six);font-style:normal;
+    display:block;font-family:"Work Sans",sans-serif;font-size:10px;font-weight:700;
+    letter-spacing:0.08em;text-transform:uppercase;color:var(--six);margin-bottom:6px;
   }
+  .commentary-body{display:block;}
+  .cm-meta{
+    font-family:"Teko",sans-serif;font-size:16px;color:var(--text-dim);letter-spacing:0.03em;
+  }
+  .cm-headline{
+    font-family:"Teko",sans-serif;font-size:30px;font-weight:700;line-height:1.15;
+    margin:4px 0;letter-spacing:0.02em;color:#fff;
+  }
+  .cm-headline.hl-six{color:var(--six);text-shadow:0 0 14px rgba(95,227,122,0.45);}
+  .cm-headline.hl-four{color:var(--accent);text-shadow:0 0 14px rgba(231,184,74,0.4);}
+  .cm-headline.hl-wicket{color:var(--live);text-shadow:0 0 14px rgba(224,48,58,0.45);}
+  .cm-headline.hl-dot{color:var(--text-dim);font-size:22px;}
+  .cm-headline.hl-run{color:#9fe8d4;font-size:24px;}
+  .cm-desc{
+    font-family:"Work Sans",sans-serif;font-size:13px;color:var(--text-dim);
+    font-style:italic;line-height:1.4;
+  }
+  .commentary-body.update{animation:commentary-slide 0.5s ease;}
+  @keyframes commentary-slide{
+    0%{opacity:0;transform:translateX(14px);}
+    100%{opacity:1;transform:translateX(0);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .commentary-body.update{animation:none;}
+  }
+
+  body.has-ticker{padding-bottom:58px;}
   .bcast-ticker{
-    overflow:hidden;white-space:nowrap;background:#0a1220;
-    border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:7px 0;
+    position:fixed;left:0;right:0;bottom:0;z-index:60;
+    display:flex;align-items:stretch;height:50px;
+    background:linear-gradient(180deg,#1c0509,#3d0b12 45%,#170406);
+    border-top:2px solid var(--live);
+    box-shadow:0 -8px 26px rgba(0,0,0,0.55);
   }
+  .ticker-live-badge{
+    flex-shrink:0;display:flex;align-items:center;gap:7px;
+    background:var(--live);color:#fff;font-family:"Teko",sans-serif;
+    font-size:19px;font-weight:700;letter-spacing:0.08em;padding:0 22px 0 16px;
+    clip-path:polygon(0 0,100% 0,86% 100%,0 100%);
+  }
+  .ticker-live-dot{width:9px;height:9px;border-radius:50%;background:#fff;flex-shrink:0;animation:ticker-dot-pulse 1.4s ease-in-out infinite;}
+  @keyframes ticker-dot-pulse{0%,100%{opacity:1;}50%{opacity:0.25;}}
+  .ticker-viewport{flex:1;overflow:hidden;white-space:nowrap;display:flex;align-items:center;}
   .ticker-track{display:inline-flex;}
   .ticker-track > span{
-    font-family:"Teko",sans-serif;font-size:15px;color:#fff;letter-spacing:0.03em;
-    padding-right:60px;flex-shrink:0;
+    font-family:"Teko",sans-serif;font-size:22px;color:#fff;letter-spacing:0.03em;
+    padding-right:48px;flex-shrink:0;
   }
-  .tk-sep{color:var(--text-faint);margin:0 14px;font-weight:400;}
-  .tk-live{color:var(--live);font-weight:700;letter-spacing:0.06em;}
-  .tk-teams{color:#fff;}
-  .tk-score{color:var(--six);}
-  .tk-score .tk-overs{color:var(--text-dim);font-size:13px;}
+  .tk-sep{color:rgba(255,255,255,0.35);margin:0 20px;font-weight:400;}
+  .tk-teams{color:#fff;font-weight:700;}
+  .tk-score{color:var(--six);font-weight:700;}
+  .tk-score .tk-overs{color:rgba(255,255,255,0.6);font-size:17px;}
   .tk-crr{color:#9fe8d4;}
   .tk-crr b, .tk-rrr b{color:#fff;font-weight:700;}
   .tk-rrr{color:var(--six);}
   .tk-need{color:var(--accent);font-weight:700;}
   .tk-target{color:var(--six);}
   .tk-pship{color:var(--sky);}
-  .ticker-track{animation:ticker-scroll 26s linear infinite;}
+  .tk-bat{color:#fff;}
+  .tk-bat b{color:var(--six);}
+  .tk-bowl{color:#fff;}
+  .tk-bowl b{color:var(--accent);}
+  .ticker-track{animation:ticker-scroll 34s linear infinite;}
   @keyframes ticker-scroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
   @media (prefers-reduced-motion: reduce){
     .ticker-track{animation:none;}
     .ticker-track > span:last-child{display:none;}
-    .bcast-ticker{text-overflow:ellipsis;}
+  }
+  @media (max-width:820px){
+    .bcast-ticker{height:44px;}
+    .ticker-live-badge{font-size:15px;padding:0 14px 0 12px;}
+    .ticker-track > span{font-size:18px;padding-right:34px;}
+    body.has-ticker{padding-bottom:50px;}
   }
   .bcast-player-card.new-player{animation:card-slide-in 0.6s ease;}
   @keyframes card-slide-in{
@@ -763,15 +810,6 @@
   @media (prefers-reduced-motion: reduce){
     .bcast-player-card.new-player{animation:none;}
   }
-  .bcast-commentary.update{animation:commentary-fade 0.5s ease;}
-  @keyframes commentary-fade{
-    0%{opacity:0;transform:translateY(4px);}
-    100%{opacity:1;transform:translateY(0);}
-  }
-  @media (prefers-reduced-motion: reduce){
-    .bcast-commentary.update{animation:none;}
-  }
-
   @media (max-width:820px){
     .bcast-top{grid-template-columns:1fr;}
     .bcast-lastball{width:100%;height:44px;border-radius:9px;}
@@ -1032,16 +1070,26 @@
         </div>
       </div>
 
-      <div class="bcast-ticker" id="bcTicker">
+      <div class="bcast-commentary" id="bcCommentary">
+        <span class="commentary-tag">Commentary</span>
+        <div class="commentary-body" id="bcCommentaryBody">
+          <div class="cm-meta">—</div>
+          <div class="cm-headline">Match in progress…</div>
+          <div class="cm-desc"></div>
+        </div>
+      </div>
+
+      <div class="bcast-brand">flood<b>light</b> <span>● live <b id="liveClock">00:00</b></span></div>
+    </div>
+
+    <div class="bcast-ticker" id="bcTicker">
+      <div class="ticker-live-badge"><span class="ticker-live-dot"></span>LIVE</div>
+      <div class="ticker-viewport">
         <div class="ticker-track" id="tickerTrack">
           <span id="tickerContent1">Loading match info…</span>
           <span id="tickerContent2" aria-hidden="true">Loading match info…</span>
         </div>
       </div>
-
-      <div class="bcast-commentary" id="bcCommentary"><span class="commentary-tag">Commentary</span> Match in progress…</div>
-
-      <div class="bcast-brand">flood<b>light</b> <span>● live <b id="liveClock">00:00</b></span></div>
     </div>
 
     <section>
@@ -1397,25 +1445,45 @@
     return arr[hashStr(seed + ":" + ballValue) % arr.length];
   }
 
+  var BALL_HEADLINE = {
+    "W":{cls:"hl-wicket", text:function(){return "🎯 OUT!";}},
+    "6":{cls:"hl-six", text:function(){return "🚀 SIX!";}},
+    "4":{cls:"hl-four", text:function(){return "🏏 FOUR!";}},
+    ".":{cls:"hl-dot", text:function(){return "DOT BALL";}},
+    "1":{cls:"hl-run", text:function(){return "1 RUN";}},
+    "2":{cls:"hl-run", text:function(){return "2 RUNS";}},
+    "3":{cls:"hl-run", text:function(){return "3 RUNS";}}
+  };
+
   var lastCommentaryKey = null;
-  function updateCommentary(m, lastBall){
-    var el = $("bcCommentary");
-    if(!el) return;
-    var key = m.id + ":" + (m.thisOver ? m.thisOver.length : 0) + ":" + lastBall;
+  function updateCommentary(m, lastBall, strikerName){
+    var body = $("bcCommentaryBody");
+    if(!body) return;
+    var key = m.id + ":" + (m._lastBallLabel || m.score.overs) + ":" + lastBall;
     if(key === lastCommentaryKey) return;
     lastCommentaryKey = key;
-    var text = (m.thisOver && m.thisOver.length) ? pickCommentary(lastBall, key) : "Match in progress…";
-    el.innerHTML = '<span class="commentary-tag">Commentary</span> ' + text;
-    el.classList.remove("update");
-    void el.offsetWidth;
-    el.classList.add("update");
+
+    var hasBall = lastBall && lastBall !== "—";
+    var overLabel = m._lastBallLabel || m.score.overs;
+    var meta = hasBall ? (overLabel + "  " + esc(m.bowler.name) + " to " + esc(strikerName || "—")) : "—";
+    var hl = BALL_HEADLINE[lastBall] || BALL_HEADLINE["."];
+    var headline = hasBall ? hl.text() : "Match in progress…";
+    var headlineCls = hasBall ? hl.cls : "";
+    var desc = hasBall ? pickCommentary(lastBall, key) : "";
+
+    body.innerHTML =
+      '<div class="cm-meta">' + meta + '</div>' +
+      '<div class="cm-headline ' + headlineCls + '">' + headline + '</div>' +
+      '<div class="cm-desc">' + esc(desc) + '</div>';
+    body.classList.remove("update");
+    void body.offsetWidth;
+    body.classList.add("update");
   }
 
   function updateTicker(m){
     var t1 = $("tickerContent1"), t2 = $("tickerContent2");
     if(!t1 || !t2) return;
     var parts = [
-      '<span class="tk-live">🔴 LIVE</span>',
       '<span class="tk-teams">' + esc(m.teamA) + ' vs ' + esc(m.teamB) + '</span>',
       '<span class="tk-score">' + m.score.runs + '/' + m.score.wkts + ' <span class="tk-overs">(' + m.score.overs + ')</span></span>',
       '<span class="tk-crr">CRR <b>' + (m.crr||0).toFixed(2) + '</b></span>'
@@ -1425,6 +1493,14 @@
       parts.push('<span class="tk-need">' + esc(teamCode(m.battingNow)) + ' NEED ' + Math.max(m.target - m.score.runs,0) + ' RUNS FROM ' + m.ballsRemaining + ' BALLS</span>');
     } else if(m.target){
       parts.push('<span class="tk-target">TARGET ' + m.target + '</span>');
+    }
+    (m.batters||[]).forEach(function(b){
+      if(!b || !b.name || b.name==="—") return;
+      var s = parseBatStat(b.stat);
+      parts.push('<span class="tk-bat">' + esc(b.name.toUpperCase()) + ' <b>' + s.runs + '</b> (' + s.balls + ')' + (b.strike?" *":"") + '</span>');
+    });
+    if(m.bowler && m.bowler.name && m.bowler.name!=="—"){
+      parts.push('<span class="tk-bowl">' + esc(m.bowler.name.toUpperCase()) + ' <b>' + esc(m.bowler.stat||"") + '</b></span>');
     }
     if(m.partnership) parts.push('<span class="tk-pship">PARTNERSHIP ' + m.partnership.runs + '(' + m.partnership.balls + ')</span>');
     var sep = '<span class="tk-sep">•</span>';
@@ -1659,9 +1735,9 @@
     renderTeamBadge($("bcBadgeB"), codeB.slice(0,2), infoB && infoB.img);
     $("bcOversB").textContent = "0";
 
-    var lastBall = (m.thisOver && m.thisOver.length) ? m.thisOver[m.thisOver.length-1] : "—";
+    var lastBall = m._lastBallValue || ((m.thisOver && m.thisOver.length) ? m.thisOver[m.thisOver.length-1] : "—");
     pulseText($("bcLastBall"), lastBall);
-    updateCommentary(m, lastBall);
+    updateCommentary(m, lastBall, m._lastFacedBatter || (m.batters[0] && m.batters[0].name));
     updateTicker(m);
 
     var celebKey = m.id + ":" + (m.thisOver ? m.thisOver.length : 0) + ":" + lastBall;
@@ -1805,6 +1881,103 @@
       : "Demo data — add a CricAPI key in Settings for real matches";
   }
 
+  /* ---------------- Demo ball-by-ball simulator (keeps the demo matches feeling live) ---------------- */
+  var DEMO_BALL_SCRIPT = ["6",".","4","1","2","W","4",".","1","6",".","4","1","2","1","."];
+  var DEMO_BENCH = {
+    "m1":["N. Kalra","I. Brar","G. Sekhon"],
+    "m2":["Y. Jaiswal","S. Iyer","T. Tilak"]
+  };
+  var demoSimState = {};
+
+  function ensureDemoSim(m){
+    var s = demoSimState[m.id];
+    if(!s){ s = {seq: hashStr(m.id) % DEMO_BALL_SCRIPT.length, benchIdx: 0}; demoSimState[m.id] = s; }
+    return s;
+  }
+
+  function advanceDemoBall(m){
+    if(!m.isDemo || m.score.wkts >= 9) return;
+    var sim = ensureDemoSim(m);
+    var val = DEMO_BALL_SCRIPT[sim.seq % DEMO_BALL_SCRIPT.length];
+    sim.seq++;
+
+    var runsAdded = (val==="W"||val===".") ? 0 : parseInt(val,10);
+    var isWicket = val === "W";
+
+    var striker = m.batters[0] || {name:"—",stat:"0 (0)",strike:true,fours:0,six:0,sr:0};
+    var nonStriker = m.batters[1] || {name:"—",stat:"0 (0)",strike:false,fours:0,six:0,sr:0};
+    m._lastFacedBatter = striker.name;
+
+    m.score.runs += runsAdded;
+    if(isWicket) m.score.wkts++;
+
+    var oParts = String(m.score.overs||"0.0").split(".");
+    var over = parseInt(oParts[0],10) || 0, ball = parseInt(oParts[1],10) || 0;
+    ball++;
+    m._lastBallLabel = over + "." + ball;
+    m._lastBallValue = val;
+    var overCompleted = false;
+    if(ball >= 6){ ball = 0; over++; overCompleted = true; }
+    m.score.overs = over + "." + ball;
+
+    m.thisOver = m.thisOver || [];
+    m.thisOver.push(val);
+    if(overCompleted){
+      m.prevOver = m.thisOver.slice();
+      m.thisOver = [];
+    }
+
+    if(isWicket){
+      var sStat = parseBatStat(striker.stat);
+      m.lastWicket = {name: striker.name, runs: parseInt(sStat.runs,10)||0, balls: parseInt(sStat.balls,10)||0};
+      var bench = DEMO_BENCH[m.id] || [];
+      var nextName = bench.length ? bench[sim.benchIdx % bench.length] : "New Batter";
+      sim.benchIdx++;
+      striker = {name: nextName, stat:"0 (0)", strike:true, fours:0, six:0, sr:0};
+      m.partnership = {runs:0, balls:0};
+    } else {
+      var sStat2 = parseBatStat(striker.stat);
+      var sRuns = (parseInt(sStat2.runs,10)||0) + runsAdded;
+      var sBalls = (parseInt(sStat2.balls,10)||0) + 1;
+      striker.stat = sRuns + " (" + sBalls + ")";
+      if(val==="4") striker.fours = (striker.fours||0) + 1;
+      if(val==="6") striker.six = (striker.six||0) + 1;
+      striker.sr = sBalls ? +((sRuns / sBalls) * 100).toFixed(1) : 0;
+      if(m.partnership){ m.partnership.runs += runsAdded; m.partnership.balls += 1; }
+    }
+
+    var rotate = ((runsAdded % 2) === 1) !== overCompleted;
+    if(rotate){ m.batters[0] = nonStriker; m.batters[1] = striker; }
+    else { m.batters[0] = striker; m.batters[1] = nonStriker; }
+    m.batters[0].strike = true;
+    m.batters[1].strike = false;
+
+    var oversDecimal = over + ball/6;
+    m.crr = oversDecimal > 0 ? +(m.score.runs / oversDecimal).toFixed(2) : 0;
+    if(m.target){
+      m.ballsRemaining = Math.max((m.ballsRemaining||0) - 1, 0);
+      m.rrr = m.ballsRemaining > 0 ? +(((m.target - m.score.runs) / (m.ballsRemaining/6)).toFixed(2)) : 0;
+    }
+
+    if(m.bowler){
+      var bParts = String(m.bowler.stat||"0.0-0-0-0").split("-");
+      var bRuns = (parseInt(bParts[2],10)||0) + runsAdded;
+      var bWkts = (parseInt(bParts[3],10)||0) + (isWicket?1:0);
+      m.bowler.stat = m.score.overs + "-0-" + bRuns + "-" + bWkts;
+      m.bowler.econ = oversDecimal > 0 ? +(bRuns / oversDecimal).toFixed(2) : 0;
+    }
+  }
+
+  function startDemoSimulator(){
+    setInterval(function(){
+      if(activeSport !== "cricket") return;
+      var m = findActiveMatch();
+      if(!m.isDemo) return;
+      advanceDemoBall(m);
+      renderCricket();
+    }, 4500);
+  }
+
   /* ---------------- Football (real live data) ---------------- */
   var footballMatches = [];
   var activeFootballId = null;
@@ -1929,13 +2102,16 @@
     });
     $("cricketView").hidden = sport !== "cricket";
     $("footballView").hidden = sport !== "football";
+    document.body.classList.toggle("has-ticker", sport === "cricket");
     if(sport === "cricket") renderCricket(); else renderFootball();
   }
   Array.prototype.forEach.call(document.querySelectorAll(".sport-tab"), function(t){
     t.addEventListener("click", function(){ setSport(t.getAttribute("data-sport")); });
   });
 
+  document.body.classList.toggle("has-ticker", activeSport === "cricket");
   renderCricket();
+  startDemoSimulator();
   fetchFootball();
   setInterval(fetchFootball, 45000);
 
