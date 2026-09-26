@@ -2228,6 +2228,7 @@
 
   var scorecardFetchState = {};
   var activeCricketKey = null;
+  var lastGoodCricket = {};
 
   function formatExtrasObj(obj){
     if(!obj) return "—";
@@ -2301,7 +2302,17 @@
         note.className = "status-note";
         note.textContent = "Connected — no cricket matches are live right now (checked " + stamp + "). Showing demo data. " + quota;
       } else {
-        cricketRealMatches = live.map(mapCricapiMatch);
+        cricketRealMatches = live.map(function(raw){
+          var nm = mapCricapiMatch(raw);
+          var cur = {count:(nm.allInnings||[]).length, overs:parseFloat(nm.score.overs)||0, runs:nm.score.runs};
+          var prev = lastGoodCricket[nm.id];
+          // CricAPI's cache servers sometimes return an older snapshot; never let an innings go backwards
+          if(prev && (cur.count < prev.count || (cur.count === prev.count && (cur.overs < prev.overs || (cur.overs === prev.overs && cur.runs < prev.runs))))){
+            return prev.match;
+          }
+          lastGoodCricket[nm.id] = {count:cur.count, overs:cur.overs, runs:cur.runs, match:nm};
+          return nm;
+        });
         if(!silent || !cricketRealMatches.some(function(m){return m.id===activeId;})) activeId = cricketRealMatches[0].id;
         note.className = "status-note ok";
         note.textContent = live.length + " live match(es) · updated " + stamp + " · " + quota;
