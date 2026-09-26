@@ -436,6 +436,18 @@
     .bcast-lastball.boom, .bcast-lastball.boom::before{animation:none !important;}
   }
 
+  .bcast-innings-strip{
+    display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;
+    background:#0a1220;border:1px solid rgba(255,255,255,0.1);border-radius:9px;
+    padding:7px 12px;font-family:"Teko",sans-serif;font-size:15px;color:var(--text-dim);
+    letter-spacing:0.02em;
+  }
+  .bcast-innings-strip .ist-inn{color:#fff;}
+  .bcast-innings-strip .ist-inn b{color:var(--six);}
+  .bcast-innings-strip .ist-inn.current{color:var(--accent);}
+  .bcast-innings-strip .ist-inn.current b{color:var(--accent);}
+  .bcast-innings-strip .ist-sep{color:var(--text-faint);}
+
   .bcast-seg-row{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);background:#000;}
   .bcast-seg-row.navy .bcast-seg{background:#0a1620;}
   .bcast-seg{
@@ -981,6 +993,8 @@
           <div class="bcast-badge-circle" id="bcBadgeB"><span id="bcBadgeBInitials">—</span></div>
         </div>
       </div>
+
+      <div class="bcast-innings-strip" id="bcInningsStrip" hidden></div>
 
       <div class="bcast-seg-row">
         <div class="bcast-seg">CRR: <b id="bcCrr">0.00</b></div>
@@ -1742,6 +1756,25 @@
     }
   }
 
+  function renderInningsStrip(m, codeA, codeB){
+    var el = $("bcInningsStrip");
+    if(!el) return;
+    var innings = m.allInnings;
+    if(!innings || innings.length < 2){ el.hidden = true; return; }
+
+    var teams = [m.teamA, m.teamB];
+    var html = innings.map(function(inn, idx){
+      var team = matchTeamFromInning(inn.inning, teams);
+      var code = team===m.battingNow ? codeA : (team===(m.teamA===m.battingNow?m.teamB:m.teamA) ? codeB : teamCode(team));
+      var isCurrent = (idx === innings.length-1);
+      var scoreStr = inn.r + "-" + inn.w + (inn.w>=10 ? " ALL OUT" : "");
+      return '<span class="ist-inn' + (isCurrent?' current':'') + '">' + esc(code) + ' <b>' + scoreStr + '</b></span>';
+    }).join('<span class="ist-sep">•</span>');
+
+    el.innerHTML = html;
+    el.hidden = false;
+  }
+
   function renderHero(m){
     var bowlingTeam = (m.teamA===m.battingNow) ? m.teamB : m.teamA;
     var infoA = teamInfoFor(m, m.battingNow);
@@ -1755,6 +1788,8 @@
 
     renderTeamBadge($("bcBadgeB"), codeB.slice(0,2), (infoB && infoB.img) || countryFlagUrl(bowlingTeam));
     $("bcOversB").textContent = "0";
+
+    renderInningsStrip(m, codeA, codeB);
 
     var lastBall = m._lastBallValue || ((m.thisOver && m.thisOver.length) ? m.thisOver[m.thisOver.length-1] : "—");
     pulseText($("bcLastBall"), lastBall);
@@ -2186,7 +2221,8 @@
       target:null, ballsRemaining:null, crr: (last.o ? +(last.r/last.o).toFixed(2) : 0), rrr:null,
       batters:[{name:"—",stat:"",strike:false},{name:"—",stat:"",strike:false}],
       bowler:{name:"—",stat:""}, thisOver:[], prevOver:[], partnership:null, lastWicket:null, winProb:null,
-      scorecards:{}, cricapiId: m.id, fantasyEnabled: !!m.fantasyEnabled
+      scorecards:{}, cricapiId: m.id, fantasyEnabled: !!m.fantasyEnabled,
+      allInnings: scores
     };
   }
 
