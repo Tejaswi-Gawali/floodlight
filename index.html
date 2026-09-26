@@ -1204,7 +1204,7 @@
 
   <h3>Cricket data</h3>
   <p>Browsers can't read Google's scorecards or scrape scoreboard sites directly (CORS blocks it), but cricket data APIs work fine. Sign up free at <b>cricketdata.org/signup.aspx</b> (formerly CricAPI, no card needed) to get a key.</p>
-  <p style="margin-top:-8px;">Free tier is capped at 100 requests/day, so once connected this polls every 5 minutes — sized to last a full 6-7 hour session with some buffer left for reloads. Faster refresh needs a paid plan (see below).</p>
+  <p style="margin-top:-8px;">Free tier is capped at 100 requests/day, so once connected this polls every 1.5 minutes — about 2.5 hours of live updates before the daily cap runs out and updates stop until it resets. Faster or longer refresh needs a paid plan (see below).</p>
   <label class="field-label" for="apiKeyInput">CricAPI / Cricket Data key</label>
   <input class="field-input" id="apiKeyInput" placeholder="Paste your free API key" autocomplete="off">
   <button class="btn" id="goLiveBtn">Fetch live cricket match</button>
@@ -2183,7 +2183,7 @@
   try { savedKey = localStorage.getItem("floodlight_cricapi_key") || ""; } catch(e){}
   if(savedKey){ $("apiKeyInput").value = savedKey; $("statusNote").textContent = "Saved key found — press Fetch to use it."; }
 
-  var CRICKET_POLL_MS = 300000; // 5 min — sized for a 6-7hr session on the 100-hits/day free tier, with buffer left over
+  var CRICKET_POLL_MS = 90000; // 1.5 min — ~2.5hrs of live updates/day before the 100-hits/day free tier runs out
   var cricketPollTimer = null;
 
   function stopCricketPolling(){
