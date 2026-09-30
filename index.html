@@ -1,4 +1,5 @@
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Floodlight</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap">
 <style>
@@ -30,6 +31,7 @@
     font-variant-numeric:tabular-nums;
   }
   *{box-sizing:border-box;}
+  html, body{overflow-x:clip;}
   body{
     margin:0;
     background:
@@ -344,45 +346,56 @@
     box-shadow:0 0 30px rgba(41,182,246,0.07) inset, 0 10px 26px rgba(0,0,0,0.35);
     display:flex;flex-direction:column;gap:9px;
   }
-  .bcast-top{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;}
+  .bcast-top{display:grid;grid-template-columns:1fr minmax(96px,170px) 1fr;gap:10px;align-items:stretch;}
   .bcast-team-panel{
-    position:relative;border-radius:14px;overflow:hidden;
-    border:2px solid var(--six);
-    padding:8px;display:flex;align-items:center;gap:10px;
-    background:repeating-linear-gradient(45deg, #c81f2f 0 14px, #7a1420 14px 28px);
-    background-size:200% 200%;
-    animation:stripe-scroll 2.2s linear infinite;
+    position:relative;border-radius:12px;overflow:hidden;
+    border:1px solid rgba(255,255,255,0.18);
+    padding:10px 12px;display:flex;align-items:center;gap:12px;
+    background:linear-gradient(100deg,#6e0a14 0%,#c81f2f 55%,#8e1220 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.25), 0 8px 18px rgba(0,0,0,0.45);
   }
-  @keyframes stripe-scroll{
-    from{background-position:0 0;}
-    to{background-position:56px -56px;}
+  .bcast-team-panel.bowl{
+    flex-direction:row-reverse;
+    background:linear-gradient(260deg,#0b2f7a 0%,#1f63d6 55%,#0f3a96 100%);
   }
+  .bcast-team-panel::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.16) 46%,transparent 62%);
+    background-size:250% 100%;animation:panel-sheen 6s linear infinite;
+  }
+  @keyframes panel-sheen{from{background-position:120% 0;}to{background-position:-120% 0;}}
   @media (prefers-reduced-motion: reduce){
-    .bcast-team-panel{animation:none;}
+    .bcast-team-panel::after{animation:none;}
   }
-  .bcast-team-panel.bowl{flex-direction:row-reverse;}
   .bcast-badge-circle{
-    width:84px;height:84px;flex-shrink:0;border-radius:50%;
-    border:4px solid var(--six);
-    background:radial-gradient(circle at 35% 30%,#1c2b3a,#080e14);
+    position:relative;z-index:1;
+    width:108px;height:76px;flex-shrink:0;border-radius:6px;
+    border:3px solid var(--six);
+    background:#0a1220;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
-    box-shadow:0 0 0 3px #000, 0 6px 14px rgba(0,0,0,0.5);
+    box-shadow:0 0 0 2px rgba(0,0,0,0.6), 0 6px 14px rgba(0,0,0,0.5);
     font-family:"Teko",sans-serif;font-size:26px;color:#fff;
-    animation:badge-glow 2.4s ease-in-out infinite;
-  }
-  @keyframes badge-glow{
-    0%,100%{box-shadow:0 0 0 3px #000, 0 6px 14px rgba(0,0,0,0.5), 0 0 0 0 rgba(231,184,74,0.35);}
-    50%{box-shadow:0 0 0 3px #000, 0 6px 14px rgba(0,0,0,0.5), 0 0 0 6px rgba(231,184,74,0.12);}
   }
   .bcast-badge-circle img{width:100%;height:100%;object-fit:cover;}
-  @media (prefers-reduced-motion: reduce){
-    .bcast-badge-circle{animation:none;}
-  }
   .bcast-team-inner{
-    flex:1;min-width:0;background:#0a1220;border-radius:10px;
-    padding:10px 14px;display:flex;flex-direction:column;gap:2px;
+    position:relative;z-index:1;
+    flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:0;text-align:center;
   }
-  .bcast-score{font-family:"Teko",sans-serif;font-size:38px;color:#fff;line-height:1;}
+  .bcast-team-name{
+    font-family:"Teko",sans-serif;font-size:20px;font-weight:600;letter-spacing:0.08em;
+    color:rgba(255,255,255,0.88);text-transform:uppercase;line-height:1;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .bcast-score{
+    font-family:"Teko",sans-serif;font-size:68px;font-weight:700;color:#fff;line-height:0.95;
+    transform:skewX(-8deg);text-shadow:0 3px 0 rgba(0,0,0,0.45), 0 0 18px rgba(0,0,0,0.35);
+    white-space:nowrap;
+  }
+  .bcast-score.value-pulse{animation:score-flash 0.65s ease-out;}
+  @keyframes score-flash{
+    0%{transform:skewX(-8deg) scale(1.18);text-shadow:0 0 18px rgba(231,184,74,0.95);}
+    100%{transform:skewX(-8deg) scale(1);}
+  }
   .value-pulse{animation:value-flash 0.65s ease-out;}
   @keyframes value-flash{
     0%{transform:scale(1.22);text-shadow:0 0 14px rgba(231,184,74,0.9);}
@@ -397,14 +410,23 @@
   @media (prefers-reduced-motion: reduce){
     .value-pulse, .ball-latest{animation:none !important;}
   }
-  .bcast-overs{font-family:"Teko",sans-serif;font-size:17px;color:#fff;}
-  .bcast-overs span{color:var(--six);}
-  .bcast-fielding-label{font-family:"Teko",sans-serif;font-size:24px;color:#fff;}
+  .bcast-overs{
+    font-family:"Teko",sans-serif;font-size:22px;font-weight:600;color:#fff;letter-spacing:0.04em;
+    background:rgba(4,8,30,0.6);border-radius:4px;padding:0 14px;margin-top:4px;line-height:1.35;
+  }
+  .bcast-overs span{color:var(--six);display:inline-block;transform:skewX(-8deg);}
+  .bcast-fielding-label{
+    font-family:"Teko",sans-serif;font-size:58px;font-weight:700;line-height:1;letter-spacing:0.02em;
+    color:#ffab1f;text-transform:uppercase;transform:skewX(-8deg);
+    text-shadow:0 3px 0 #7a3300, 0 0 16px rgba(255,150,20,0.35);
+  }
   .bcast-lastball{
-    position:relative;align-self:center;justify-self:center;width:96px;height:80px;border-radius:12px;flex-shrink:0;
-    background:#0a1220;border:2px solid #1a5c9c;
+    position:relative;align-self:stretch;justify-self:stretch;min-height:96px;border-radius:14px;flex-shrink:0;
+    background:linear-gradient(180deg,#2a2d33 0%,#07080a 55%,#000 100%);
+    border:1px solid rgba(255,255,255,0.14);
+    box-shadow:inset 0 2px 0 rgba(255,255,255,0.12), 0 8px 18px rgba(0,0,0,0.5);
     display:flex;align-items:center;justify-content:center;
-    font-family:"Teko",sans-serif;font-size:36px;color:#fff;
+    font-family:"Teko",sans-serif;font-size:72px;font-weight:700;color:#fff;
     z-index:2;
   }
   .bcast-lastball::before{
@@ -450,6 +472,19 @@
 
   .bcast-seg-row{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);background:#000;}
   .bcast-seg-row.navy .bcast-seg{background:#0a1620;}
+  .bcast-seg-row.stats{background:linear-gradient(90deg,#0a1f5c,#12308a 50%,#0a1f5c);border-color:rgba(120,160,255,0.3);}
+  .bcast-seg-row.stats .bcast-seg{font-size:24px;font-weight:600;padding:6px 14px;}
+  .bcast-seg-row.stats .bcast-seg b{display:inline-block;transform:skewX(-8deg);}
+  .bcast-seg.win-seg{flex:2;}
+  .win-pills{display:flex;width:100%;border-radius:4px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,0.2);}
+  .win-pill{
+    flex:1 1 50%;min-width:max-content;padding:1px 12px;text-align:center;
+    font-family:"Teko",sans-serif;font-size:20px;font-weight:600;color:#fff;letter-spacing:0.03em;
+    transition:flex-basis 0.7s ease;
+  }
+  .win-pill b{color:#fff !important;}
+  .win-pill.a{background:linear-gradient(180deg,#e0303a,#9e1520);}
+  .win-pill.b{background:linear-gradient(180deg,#2f7bf0,#1447a8);}
   .bcast-seg{
     flex:1;min-width:0;padding:8px 12px;
     font-family:"Teko",sans-serif;font-size:16px;color:#fff;
@@ -461,7 +496,7 @@
   .bcast-seg.wide{flex:2;}
 
   .bcast-stadium{
-    position:relative;height:190px;overflow:hidden;border-radius:10px;
+    position:relative;height:420px;overflow:hidden;border-radius:10px;
     background:#0b1c10;
   }
   .bcast-stadium .stadium-photo{
@@ -630,31 +665,54 @@
     .celebration-text{animation-duration:1.4s !important;}
   }
 
-  .bcast-over-history{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);background:#0a3a63;}
+  .bcast-over-history{
+    display:flex;align-items:stretch;border-radius:9px;overflow:hidden;
+    border:1px solid rgba(180,140,255,0.35);
+    background:linear-gradient(90deg,#1c0a4a,#2e1270 50%,#1c0a4a);
+  }
+  .oh-recent{
+    flex-shrink:0;display:flex;align-items:center;padding:0 18px;
+    font-family:"Teko",sans-serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:0.06em;
+    text-transform:uppercase;background:rgba(0,0,0,0.35);
+  }
   .oh-seg{
-    flex:1;min-width:0;display:flex;align-items:center;gap:8px;
-    padding:8px 12px;border-right:1px solid rgba(255,255,255,0.15);overflow-x:auto;
+    flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:safe center;gap:10px;
+    padding:8px 12px;overflow-x:auto;scrollbar-width:none;
   }
-  .oh-seg:last-child{border-right:none;}
-  .oh-label{font-family:"Teko",sans-serif;font-size:14px;color:#fff;flex-shrink:0;white-space:nowrap;}
-  .oh-balls{display:flex;gap:4px;flex-shrink:0;}
+  .oh-seg::-webkit-scrollbar{display:none;}
+  .oh-label{
+    font-family:"Teko",sans-serif;font-size:15px;font-weight:600;color:#fff;flex-shrink:0;
+    text-transform:uppercase;line-height:1;text-align:center;max-width:52px;
+  }
+  .oh-balls{display:flex;gap:6px;flex-shrink:0;}
   .bcast-ball{
-    width:24px;height:24px;border-radius:50%;flex-shrink:0;
+    min-width:34px;height:34px;padding:0 4px;border-radius:7px;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;
-    font-family:"Teko",sans-serif;font-size:12px;color:#04150f;font-weight:700;
-    background:#3fae8a;
+    font-family:"Teko",sans-serif;font-size:22px;color:#fff;font-weight:700;
+    background:linear-gradient(180deg,#5a2bc0,#34118a);
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55);
   }
-  .bcast-ball.four{background:#e2564f;color:#fff;}
-  .bcast-ball.six{background:var(--six);color:#241a00;}
-  .bcast-ball.wicket{background:#c81f2f;color:#fff;}
+  .bcast-ball.four{background:linear-gradient(180deg,#ff8a2a,#d9531a);}
+  .bcast-ball.six{background:linear-gradient(180deg,#ffd35a,#e0a414);color:#2a1a00;}
+  .bcast-ball.wicket{background:linear-gradient(180deg,#f0424c,#b3141f);}
+  .bcast-ball.extra{background:linear-gradient(180deg,#5cc84a,#2f8f22);}
   .oh-total{
-    font-family:"Teko",sans-serif;font-size:15px;color:var(--six);
-    background:#0a1220;border:1px solid var(--six);border-radius:5px;
-    padding:2px 8px;flex-shrink:0;margin-left:auto;
+    font-family:"Teko",sans-serif;font-size:28px;font-weight:700;color:var(--six);
+    flex-shrink:0;line-height:1;
   }
+  .oh-total::before{content:"= ";}
 
-  .bcast-players-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
-  .bcast-player-card{border-radius:10px;overflow:hidden;background:#000;border:2px solid transparent;}
+  .bcast-players-row{
+    position:absolute;left:10px;right:10px;bottom:10px;z-index:5;
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;
+  }
+  .bcast-player-card{
+    position:relative;display:flex;align-items:stretch;min-height:132px;
+    border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,0.28);
+    background:linear-gradient(100deg,#3a060c 0%,#9e1520 45%,#c81f2f 100%);
+    box-shadow:0 10px 22px rgba(0,0,0,0.55);
+  }
+  .bcast-player-card.bowl{background:linear-gradient(100deg,#071d52 0%,#1447a8 45%,#2f7bf0 100%);}
   .bcast-player-card.on-strike{
     border-color:var(--six);
     animation:strike-pulse 1.8s ease-in-out infinite;
@@ -671,24 +729,30 @@
     animation:card-slide-in 0.6s ease, strike-pulse 1.8s ease-in-out infinite;
   }
 
-  .win-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:#0a1220;}
-  .win-bar-fill{transition:flex-basis 0.7s ease;}
-  .win-bar-fill.a{background:linear-gradient(90deg,#1a5c9c,#4d9ad9);}
-  .win-bar-fill.b{background:linear-gradient(90deg,#7a1420,#c81f2f);}
+  .bcast-player-card .pc-body{
+    flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-end;text-align:right;
+  }
   .bcast-player-card .role-header{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:6px 10px;font-family:"Teko",sans-serif;font-size:16px;color:#fff;letter-spacing:0.02em;
-    background:linear-gradient(90deg,#7a1f5c,#a3195b);
+    align-self:stretch;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+    padding:4px 10px;background:linear-gradient(90deg,transparent,rgba(0,0,0,0.45) 30%);
   }
-  .bcast-player-card.bowl .role-header{background:linear-gradient(90deg,#1f4f7a,#195ba3);}
-  .bcast-player-card .role-header span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .bcast-player-card .role-tag{font-family:"Work Sans",sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#f4c9de;flex-shrink:0;}
-  .bcast-player-card.bowl .role-tag{color:#c3e0f7;}
-  .bcast-player-card .stat-pill{
-    display:flex;align-items:center;gap:10px;padding:9px 12px;
-    background:linear-gradient(90deg,#123a23 0%,#0b1c14 55%,#050805 100%);
+  .bcast-player-card .pc-flag{
+    width:34px;height:22px;flex-shrink:0;border-radius:2px;overflow:hidden;
+    background:#0a1220;box-shadow:0 0 0 1px rgba(255,255,255,0.35);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Teko",sans-serif;font-size:13px;color:#fff;
   }
-  .bcast-player-card.bowl .stat-pill{background:linear-gradient(90deg,#3a1216 0%,#240a0c 55%,#050505 100%);}
+  .bcast-player-card .pc-flag img{width:100%;height:100%;object-fit:cover;display:block;}
+  .bcast-player-card .role-tag{
+    font-family:"Teko",sans-serif;font-size:22px;font-weight:700;letter-spacing:0.08em;
+    text-transform:uppercase;color:#fff;line-height:1;
+  }
+  .bcast-player-card .pc-name{
+    max-width:100%;padding:4px 12px 0;
+    font-family:"Teko",sans-serif;font-size:28px;font-weight:700;color:#fff;line-height:1;
+    text-transform:uppercase;letter-spacing:0.03em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
   .avatar{
     border-radius:50%;overflow:hidden;flex-shrink:0;
     background:radial-gradient(circle at 35% 30%,#e8c99a,#a9784a);
@@ -712,12 +776,19 @@
   @media (prefers-reduced-motion: reduce){
     .avatar-photo{animation:none !important;}
   }
-  .bcast-player-card .avatar{width:52px;height:52px;font-size:13px;}
-  .bcast-player-card .pscore-wrap{display:flex;align-items:baseline;gap:5px;}
-  .bcast-player-card .pscore{font-family:"Teko",sans-serif;font-size:32px;color:#5fe37a;line-height:1;}
-  .bcast-player-card.bowl .pscore{color:#fff;}
-  .bcast-player-card .pballs{font-family:"Teko",sans-serif;font-size:18px;color:var(--six);}
-  .bcast-player-card .pstats{padding:7px 12px;font-size:11px;color:var(--six);font-family:"Work Sans",sans-serif;}
+  .bcast-player-card .avatar{
+    width:118px;align-self:stretch;flex-shrink:0;border-radius:0;box-shadow:none;
+    background:#0a1220;font-size:13px;
+    -webkit-mask-image:linear-gradient(90deg,#000 78%,transparent);mask-image:linear-gradient(90deg,#000 78%,transparent);
+  }
+  .bcast-player-card .avatar .avatar-photo{object-position:center 20%;}
+  .bcast-player-card .pscore-wrap{display:flex;align-items:baseline;gap:6px;padding:0 12px;margin-top:auto;}
+  .bcast-player-card .pscore{
+    font-family:"Teko",sans-serif;font-size:50px;font-weight:700;color:#fff;line-height:0.95;
+    display:inline-block;transform:skewX(-8deg);text-shadow:0 3px 0 rgba(0,0,0,0.4);
+  }
+  .bcast-player-card .pballs{font-family:"Teko",sans-serif;font-size:28px;font-weight:600;color:var(--six);display:inline-block;transform:skewX(-8deg);}
+  .bcast-player-card .pstats{padding:2px 12px 7px;font-size:11px;color:rgba(255,255,255,0.75);font-family:"Work Sans",sans-serif;}
   .bcast-player-card .pstats b{color:#fff;}
 
   .bcast-brand{
@@ -822,10 +893,27 @@
   @media (prefers-reduced-motion: reduce){
     .bcast-player-card.new-player{animation:none;}
   }
-  @media (max-width:820px){
+  @media (max-width:980px){
+    .bcast-badge-circle{width:76px;height:54px;}
+    .bcast-score{font-size:50px;}
+    .bcast-fielding-label{font-size:42px;}
+    .bcast-lastball{font-size:56px;min-height:80px;}
+    .bcast-player-card .avatar{width:88px;}
+    .bcast-player-card .pc-name{font-size:22px;}
+    .bcast-player-card .pscore{font-size:40px;}
+    .bcast-player-card .role-tag{font-size:18px;}
+  }
+  @media (max-width:760px){
     .bcast-top{grid-template-columns:1fr;}
-    .bcast-lastball{width:100%;height:44px;border-radius:9px;}
-    .bcast-players-row{grid-template-columns:1fr;}
+    .bcast-lastball{min-height:56px;font-size:44px;}
+    .bcast-seg-row.stats{flex-wrap:wrap;}
+    .bcast-seg-row.stats .bcast-seg{font-size:19px;}
+    .bcast-seg.win-seg{flex-basis:100%;border-right:none;border-top:1px solid rgba(255,255,255,0.12);}
+    .bcast-over-history{flex-wrap:wrap;}
+    .oh-recent{flex-basis:100%;justify-content:center;padding:4px 0;font-size:20px;}
+    .bcast-stadium{height:auto;padding:200px 8px 8px;}
+    .bcast-players-row{position:relative;left:auto;right:auto;bottom:auto;grid-template-columns:1fr;}
+    .bcast-player-card{min-height:112px;}
   }
 
   /* ---------- sections ---------- */
@@ -980,6 +1068,7 @@
         <div class="bcast-team-panel bat" id="bcTeamA">
           <div class="bcast-badge-circle" id="bcBadgeA"><span id="bcBadgeAInitials">—</span></div>
           <div class="bcast-team-inner">
+            <div class="bcast-team-name" id="bcTeamNameA">—</div>
             <div class="bcast-score" id="bcScoreA">0-0</div>
             <div class="bcast-overs">OVERS: <span id="bcOversA">0.0</span></div>
           </div>
@@ -987,8 +1076,9 @@
         <div class="bcast-lastball" id="bcLastBall">—</div>
         <div class="bcast-team-panel bowl" id="bcTeamB">
           <div class="bcast-team-inner">
+            <div class="bcast-team-name" id="bcTeamNameB">—</div>
             <div class="bcast-fielding-label">Bowling</div>
-            <div class="bcast-overs">OVERS: <span id="bcOversB">0</span></div>
+            <div class="bcast-overs" hidden>OVERS: <span id="bcOversB">0</span></div>
           </div>
           <div class="bcast-badge-circle" id="bcBadgeB"><span id="bcBadgeBInitials">—</span></div>
         </div>
@@ -996,21 +1086,35 @@
 
       <div class="bcast-innings-strip" id="bcInningsStrip" hidden></div>
 
-      <div class="bcast-seg-row">
+      <div class="bcast-seg-row stats">
         <div class="bcast-seg">CRR: <b id="bcCrr">0.00</b></div>
         <div class="bcast-seg">RRR: <b id="bcRrr">—</b></div>
-        <div class="bcast-seg" id="bcPshipWrap">P.SHIP: <b id="bcPship">—</b></div>
-        <div class="bcast-seg wide" id="bcContextMsg"></div>
+        <div class="bcast-seg" id="bcPshipWrap">P'SHIP: <b id="bcPship">—</b></div>
+        <div class="bcast-seg win-seg">
+          <div class="win-pills" id="bcWinBar" hidden>
+            <div class="win-pill a" id="bcWinBarA"><span id="bcWinCodeA">—</span> <b id="bcWinA">0%</b></div>
+            <div class="win-pill b" id="bcWinBarB"><span id="bcWinCodeB">—</span> <b id="bcWinB">0%</b></div>
+          </div>
+        </div>
       </div>
 
       <div class="bcast-seg-row navy">
         <div class="bcast-seg">Last Wkt: <span id="bcLastWkt"></span></div>
-        <div class="bcast-seg" id="bcWinAWrap">Win <b id="bcWinA">0%</b></div>
-        <div class="bcast-seg" id="bcWinBWrap">Win <b id="bcWinB">0%</b></div>
+        <div class="bcast-seg wide" id="bcContextMsg"></div>
       </div>
-      <div class="win-bar" id="bcWinBar" hidden>
-        <div class="win-bar-fill a" id="bcWinBarA"></div>
-        <div class="win-bar-fill b" id="bcWinBarB"></div>
+
+      <div class="bcast-over-history">
+        <div class="oh-recent">Recent</div>
+        <div class="oh-seg">
+          <span class="oh-label" id="ohPrevLabel">Over —</span>
+          <div class="oh-balls" id="bcPrevOver"></div>
+          <span class="oh-total" id="bcPrevSum">0</span>
+        </div>
+        <div class="oh-seg">
+          <span class="oh-label" id="ohThisLabel">This over</span>
+          <div class="oh-balls" id="bcThisOver"></div>
+          <span class="oh-total" id="bcThisSum">0</span>
+        </div>
       </div>
 
       <div class="bcast-stadium" id="bcStadium">
@@ -1042,45 +1146,35 @@
           <div class="celebration-text" id="celebrationText"></div>
         </div>
         <div class="replay-badge" id="replayBadge">Replay</div>
-      </div>
 
-      <div class="bcast-players-row">
-        <div class="bcast-player-card bat" id="bcCard1">
-          <div class="role-header"><span id="bcName1">—</span><span class="role-tag">Batsman</span></div>
-          <div class="stat-pill">
+        <div class="bcast-players-row">
+          <div class="bcast-player-card bat" id="bcCard1">
             <div class="avatar" id="bcAvatar1"></div>
-            <div class="pscore-wrap"><span class="pscore" id="bcScore1">0</span><span class="pballs" id="bcBalls1">(0)</span></div>
+            <div class="pc-body">
+              <div class="role-header"><span class="pc-flag" id="bcFlag1"></span><span class="role-tag">Batter</span></div>
+              <div class="pc-name" id="bcName1">—</div>
+              <div class="pscore-wrap"><span class="pscore" id="bcScore1">0</span><span class="pballs" id="bcBalls1">(0)</span></div>
+              <div class="pstats">4s <b id="bc4s1">0</b> · 6s <b id="bc6s1">0</b> · SR <b id="bcSr1">0.00</b></div>
+            </div>
           </div>
-          <div class="pstats">4s: <b id="bc4s1">0</b>&nbsp;&nbsp;6s: <b id="bc6s1">0</b>&nbsp;&nbsp;SR: <b id="bcSr1">0.00</b></div>
-        </div>
-        <div class="bcast-player-card bat" id="bcCard2">
-          <div class="role-header"><span id="bcName2">—</span><span class="role-tag">Batsman</span></div>
-          <div class="stat-pill">
+          <div class="bcast-player-card bat" id="bcCard2">
             <div class="avatar" id="bcAvatar2"></div>
-            <div class="pscore-wrap"><span class="pscore" id="bcScore2">0</span><span class="pballs" id="bcBalls2">(0)</span></div>
+            <div class="pc-body">
+              <div class="role-header"><span class="pc-flag" id="bcFlag2"></span><span class="role-tag">Batter</span></div>
+              <div class="pc-name" id="bcName2">—</div>
+              <div class="pscore-wrap"><span class="pscore" id="bcScore2">0</span><span class="pballs" id="bcBalls2">(0)</span></div>
+              <div class="pstats">4s <b id="bc4s2">0</b> · 6s <b id="bc6s2">0</b> · SR <b id="bcSr2">0.00</b></div>
+            </div>
           </div>
-          <div class="pstats">4s: <b id="bc4s2">0</b>&nbsp;&nbsp;6s: <b id="bc6s2">0</b>&nbsp;&nbsp;SR: <b id="bcSr2">0.00</b></div>
-        </div>
-        <div class="bcast-player-card bowl" id="bcCard3">
-          <div class="role-header"><span id="bcName3">—</span><span class="role-tag">Bowler</span></div>
-          <div class="stat-pill">
+          <div class="bcast-player-card bowl" id="bcCard3">
             <div class="avatar" id="bcAvatar3"></div>
-            <div class="pscore-wrap"><span class="pscore" id="bcScore3">0-0</span><span class="pballs" id="bcBalls3">(0)</span></div>
+            <div class="pc-body">
+              <div class="role-header"><span class="pc-flag" id="bcFlag3"></span><span class="role-tag">Bowler</span></div>
+              <div class="pc-name" id="bcName3">—</div>
+              <div class="pscore-wrap"><span class="pscore" id="bcScore3">0-0</span><span class="pballs" id="bcBalls3">(0)</span></div>
+              <div class="pstats">Econ <b id="bcEcon3">0.00</b></div>
+            </div>
           </div>
-          <div class="pstats">Econ: <b id="bcEcon3">0.00</b></div>
-        </div>
-      </div>
-
-      <div class="bcast-over-history">
-        <div class="oh-seg">
-          <span class="oh-label" id="ohPrevLabel">Over —:</span>
-          <div class="oh-balls" id="bcPrevOver"></div>
-          <span class="oh-total" id="bcPrevSum">0</span>
-        </div>
-        <div class="oh-seg">
-          <span class="oh-label">This over:</span>
-          <div class="oh-balls" id="bcThisOver"></div>
-          <span class="oh-total" id="bcThisSum">0</span>
         </div>
       </div>
 
@@ -1242,7 +1336,7 @@
       ballsRemaining:21,
       batters:[{name:"A. Sandhu", stat:"58 (39)", strike:true, fours:6, six:2, sr:148.7},{name:"H. Dhillon", stat:"21 (18)", strike:false, fours:2, six:0, sr:116.7}],
       bowler:{name:"R. Bajwa", stat:"3.3-0-29-2", econ:8.29},
-      thisOver:["1","4","W","6",".","2"],
+      thisOver:["6",".","2"],
       prevOver:["4","1","W",".","2","1"],
       partnership:{runs:24, balls:15},
       lastWicket:{name:"I. Brar", runs:8, balls:9},
@@ -1292,7 +1386,7 @@
       ballsRemaining:null,
       batters:[{name:"R. Sharma", stat:"31 (19)", strike:true, fours:4, six:1, sr:163.2},{name:"I. Kishan", stat:"17 (16)", strike:false, fours:2, six:0, sr:106.3}],
       bowler:{name:"D. Chahar", stat:"2-0-18-1", econ:9.00},
-      thisOver:[".","1","1","4",".","6"],
+      thisOver:["1","4",".","6"],
       prevOver:[".","4","1","6",".","1"],
       partnership:{runs:48, balls:35},
       lastWicket:{name:"Y. Jaiswal", runs:0, balls:3},
@@ -1366,6 +1460,7 @@
     if(v==="4") return "four";
     if(v==="6") return "six";
     if(v===".") return "dot";
+    if(/wd|nb/i.test(v)) return "extra";
     return "";
   }
 
@@ -1434,7 +1529,7 @@
       var b = document.createElement("span");
       b.className = "bcast-ball " + ballClass(v);
       if(highlightLast && i === arr.length - 1) b.className += " ball-latest";
-      b.textContent = v;
+      b.textContent = v === "." ? "0" : v;
       el.appendChild(b);
     });
     return sum;
@@ -1740,20 +1835,28 @@
       .trim();
     var code = COUNTRY_FLAGS[n];
     if(!code) return null;
-    return "https://cdn.jsdelivr.net/gh/HatScripts/circle-flags@gh-pages/flags/" + code + ".svg";
+    return "https://flagcdn.com/w160/" + code + ".png";
   }
 
   function renderTeamBadge(el, code, imgUrl){
+    var sig = imgUrl || ("crest:" + code);
+    if(el.dataset.badge === sig) return;
+    el.dataset.badge = sig;
     if(imgUrl){
       el.innerHTML = "";
       var img = document.createElement("img");
       img.src = imgUrl; img.alt = code;
-      img.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:50%;";
+      img.style.cssText = "width:100%;height:100%;object-fit:" + (imgUrl.indexOf("flagcdn.com") !== -1 ? "cover" : "contain") + ";";
       img.onerror = function(){ el.innerHTML = teamCrestSVG(code); };
       el.appendChild(img);
     } else {
       el.innerHTML = teamCrestSVG(code);
     }
+  }
+
+  function teamBadgeUrl(m, team){
+    var info = teamInfoFor(m, team);
+    return countryFlagUrl(team) || (info && info.img) || null;
   }
 
   function renderInningsStrip(m, codeA, codeB){
@@ -1782,12 +1885,20 @@
     var codeA = (infoA && infoA.shortname) || teamCode(m.battingNow || m.teamA);
     var codeB = (infoB && infoB.shortname) || teamCode(bowlingTeam);
 
-    renderTeamBadge($("bcBadgeA"), codeA.slice(0,2), (infoA && infoA.img) || countryFlagUrl(m.battingNow || m.teamA));
-    pulseText($("bcScoreA"), m.score.runs + "-" + m.score.wkts);
+    var badgeA = teamBadgeUrl(m, m.battingNow || m.teamA), badgeB = teamBadgeUrl(m, bowlingTeam);
+    renderTeamBadge($("bcBadgeA"), codeA.slice(0,2), badgeA);
+    $("bcTeamNameA").textContent = m.battingNow || m.teamA;
+    pulseText($("bcScoreA"), m.score.runs + "/" + m.score.wkts);
     pulseText($("bcOversA"), m.score.overs);
 
-    renderTeamBadge($("bcBadgeB"), codeB.slice(0,2), (infoB && infoB.img) || countryFlagUrl(bowlingTeam));
+    renderTeamBadge($("bcBadgeB"), codeB.slice(0,2), badgeB);
+    $("bcTeamNameB").textContent = bowlingTeam;
     $("bcOversB").textContent = "0";
+    renderTeamBadge($("bcFlag1"), codeA.slice(0,3), badgeA);
+    renderTeamBadge($("bcFlag2"), codeA.slice(0,3), badgeA);
+    renderTeamBadge($("bcFlag3"), codeB.slice(0,3), badgeB);
+    $("bcWinCodeA").textContent = codeA;
+    $("bcWinCodeB").textContent = codeB;
 
     renderInningsStrip(m, codeA, codeB);
 
@@ -1817,8 +1928,9 @@
       contextEl.textContent = m.sub || "";
     }
 
-    var thisOverNum = m.score.overs ? Math.ceil(parseFloat(m.score.overs)) : null;
-    $("ohPrevLabel").textContent = thisOverNum ? ("Over " + (thisOverNum-1) + ":") : "Prev over:";
+    var thisOverNum = m.score.overs ? Math.floor(parseFloat(m.score.overs)) + 1 : null;
+    $("ohPrevLabel").textContent = thisOverNum ? ("Over " + (thisOverNum-1)) : "Prev over";
+    $("ohThisLabel").textContent = thisOverNum ? ("Over " + thisOverNum) : "This over";
     var thisSum = renderBallGroup($("bcThisOver"), m.thisOver, true);
     $("bcThisSum").textContent = thisSum;
     var prevSum = renderBallGroup($("bcPrevOver"), m.prevOver);
@@ -2184,6 +2296,8 @@
   if(savedKey){ $("apiKeyInput").value = savedKey; $("statusNote").textContent = "Saved key found — press Fetch to use it."; }
 
   var CRICKET_POLL_MS = 60000; // 1 min — ~1hr40min of live updates/day before the 100-hits/day free tier runs out
+  // When set, every visitor reads the shared Cloudflare proxy (proxy/worker.js) instead of calling CricAPI with a key
+  var CRICKET_PROXY_URL = "";
   var cricketPollTimer = null;
 
   function stopCricketPolling(){
@@ -2291,7 +2405,7 @@
     var note = $("statusNote");
     if(!silent){ note.className = "status-note"; note.textContent = "Contacting cricketdata.org…"; }
     try{
-      var res = await fetch("https://api.cricapi.com/v1/currentMatches?apikey=" + encodeURIComponent(key) + "&offset=0");
+      var res = await fetch(CRICKET_PROXY_URL || ("https://api.cricapi.com/v1/currentMatches?apikey=" + encodeURIComponent(key) + "&offset=0"));
       var json = await res.json();
       if(json.status !== "success") throw new Error(json.message || "API rejected the request");
       var live = (json.data || []).filter(function(m){ return m.matchStarted && !m.matchEnded; });
@@ -2330,7 +2444,7 @@
     activeCricketKey = key;
     var ok = await fetchCricketLive(key, {silent: silent});
     stopCricketPolling();
-    if(ok){
+    if(ok || CRICKET_PROXY_URL){
       cricketPollTimer = setInterval(function(){ fetchCricketLive(key, {silent:true}); }, CRICKET_POLL_MS);
     }
     return ok;
@@ -2348,7 +2462,8 @@
     connectAndPoll(key, false);
   });
 
-  if(savedKey){ connectAndPoll(savedKey, true); }
+  if(CRICKET_PROXY_URL){ connectAndPoll(null, true); }
+  else if(savedKey){ connectAndPoll(savedKey, true); }
 
   /* ---------------- OBS overlay mode ---------------- */
   function applyOverlay(on){
