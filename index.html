@@ -1071,9 +1071,24 @@
   body.overlay-mode section:not(.hero-wrap),
   body.overlay-mode footer,
   body.overlay-mode .sport-tabs{display:none !important;}
-  body.overlay-mode .wrap{padding:14px;max-width:100%;}
+  body.overlay-mode .wrap{max-width:100%;padding:10px 12px;}
+  body.overlay-mode .bcast{margin-top:0;}
+  body.overlay-mode .bcast-commentary, body.overlay-mode .bcast-brand{display:none !important;}
+  /* wide stream sources (e.g. a 1920x1080 OBS browser source): the board fills exactly one screen */
+  @media (min-width:761px){
+    body.overlay-mode{height:100vh;overflow:hidden;padding-bottom:0 !important;}
+    body.overlay-mode .wrap{height:100vh;box-sizing:border-box;display:flex;flex-direction:column;padding:10px 12px 62px;}
+    body.overlay-mode #cricketView{flex:1;min-height:0;display:flex;flex-direction:column;}
+    body.overlay-mode .bcast{flex:1;min-height:0;gap:8px;padding:10px;}
+    body.overlay-mode .bcast > *{flex-shrink:0;}
+    body.overlay-mode .bcast > .bcast-stadium{flex:1 1 auto;height:auto;min-height:170px;padding:0;}
+  }
   body.overlay-mode .hero-wrap{margin-top:0;}
-  body.overlay-mode .topbar{padding:0 0 10px;justify-content:flex-end;}
+  body.overlay-mode .topbar{
+    position:fixed;top:6px;right:8px;z-index:80;padding:0;margin:0;max-width:none;
+    justify-content:flex-end;opacity:0;transition:opacity 0.2s;
+  }
+  body.overlay-mode .topbar:hover, body.overlay-mode .topbar:focus-within{opacity:1;}
   body.overlay-mode .icon-btn:not(#exitOverlayBtn){display:none;}
   .overlay-hint{font-size:11px;color:var(--text-faint);margin-top:6px;}
 </style>
@@ -1577,10 +1592,7 @@
 
   function renderBallGroup(el, arr, highlightLast){
     el.innerHTML = "";
-    if(!arr || !arr.length){
-      el.innerHTML = '<span class="muted-note" style="padding:0;">not available</span>';
-      return 0;
-    }
+    if(!arr || !arr.length) return 0;
     var sum = 0;
     arr.forEach(function(v, i){
       sum += runVal(v);
@@ -1633,7 +1645,7 @@
 
     var hasBall = lastBall && lastBall !== "—";
     var overLabel = m._lastBallLabel || m.score.overs;
-    var meta = hasBall ? (overLabel + "  " + esc(m.bowler.name) + " to " + esc(strikerName || "—")) : "—";
+    var meta = hasBall ? (overLabel + "  " + esc(m._lastBowler || m.bowler.name) + " to " + esc(strikerName || "—")) : "—";
     var hl = BALL_HEADLINE[lastBall] || BALL_HEADLINE["."];
     var headline = hasBall ? hl.text() : "Match in progress…";
     var headlineCls = hasBall ? hl.cls : "";
@@ -2146,7 +2158,42 @@
     "m1":["N. Kalra","I. Brar","G. Sekhon"],
     "m2":["Y. Jaiswal","S. Iyer","T. Tilak"]
   };
+  // bowling attack each demo innings rotates through, one over at a time (T20: max 4 overs each)
+  var DEMO_BOWLERS = {
+    "m1":["R. Bajwa","V. Randhawa","K. Chahal","M. Uppal","S. Bhullar"],
+    "m2":["D. Chahar","T. Deshpande","M. Theekshana","M. Pathirana","R. Ashwin"]
+  };
+  var DEMO_MAX_BALLS_PER_BOWLER = 24;
   var demoSimState = {};
+
+  function formatBowlerFigures(f){
+    return Math.floor(f.balls / 6) + "." + (f.balls % 6) + "-0-" + f.runs + "-" + f.wkts;
+  }
+
+  function demoBowlerFigures(m, sim){
+    if(!sim.bowlers){
+      sim.bowlers = {};
+      var names = DEMO_BOWLERS[m.id] || [m.bowler.name];
+      names.forEach(function(n, idx){
+        // earlier-spell figures for the rest of the attack so nobody starts on 0-0
+        sim.bowlers[n] = {balls: 12 + 6 * (idx % 3), runs: 18 + 7 * idx, wkts: idx % 2};
+      });
+      var p = String(m.bowler.stat || "").split("-");
+      if(p.length >= 4) sim.bowlers[m.bowler.name] = {balls: oversToBalls(p[0]), runs: parseInt(p[2],10) || 0, wkts: parseInt(p[3],10) || 0};
+    }
+    if(!sim.bowlers[m.bowler.name]) sim.bowlers[m.bowler.name] = {balls:0, runs:0, wkts:0};
+    return sim.bowlers[m.bowler.name];
+  }
+
+  function nextDemoBowler(m, sim){
+    var names = DEMO_BOWLERS[m.id] || [m.bowler.name];
+    var start = names.indexOf(m.bowler.name);
+    for(var k = 1; k <= names.length; k++){
+      var cand = names[(start + k + names.length) % names.length];
+      if(cand !== m.bowler.name && (!sim.bowlers[cand] || sim.bowlers[cand].balls < DEMO_MAX_BALLS_PER_BOWLER)) return cand;
+    }
+    return m.bowler.name;
+  }
 
   function ensureDemoSim(m){
     var s = demoSimState[m.id];
@@ -2219,11 +2266,17 @@
     }
 
     if(m.bowler){
-      var bParts = String(m.bowler.stat||"0.0-0-0-0").split("-");
-      var bRuns = (parseInt(bParts[2],10)||0) + runsAdded;
-      var bWkts = (parseInt(bParts[3],10)||0) + (isWicket?1:0);
-      m.bowler.stat = m.score.overs + "-0-" + bRuns + "-" + bWkts;
-      m.bowler.econ = oversDecimal > 0 ? +(bRuns / oversDecimal).toFixed(2) : 0;
+      m._lastBowler = m.bowler.name;
+      var fig = demoBowlerFigures(m, sim);
+      fig.balls += 1;
+      fig.runs += runsAdded;
+      if(isWicket) fig.wkts += 1;
+      if(overCompleted){
+        m.bowler = {name: nextDemoBowler(m, sim), stat: "", econ: 0};
+        fig = demoBowlerFigures(m, sim);
+      }
+      m.bowler.stat = formatBowlerFigures(fig);
+      m.bowler.econ = fig.balls ? +(fig.runs * 6 / fig.balls).toFixed(2) : 0;
     }
   }
 
