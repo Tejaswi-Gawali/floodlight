@@ -531,6 +531,19 @@
     100%{background-position:100% 100%;}
   }
 
+  /* piano-key equalizer hanging from the top of the ground, driven by commentary audio */
+  .eq-bars{
+    position:absolute;top:0;left:2.5%;right:2.5%;height:min(30%,130px);z-index:4;pointer-events:none;
+    display:flex;align-items:flex-start;gap:0.9%;
+  }
+  .eq-bar{
+    flex:1;height:100%;transform-origin:top center;transform:scaleY(0.14);
+    background:linear-gradient(180deg,#2a0306 0%,#5a0a12 70%,#7a1420 100%);
+    border:1px solid rgba(255,255,255,0.08);border-top:none;border-radius:0 0 3px 3px;
+    box-shadow:0 4px 8px rgba(0,0,0,0.35);will-change:transform;
+  }
+  .eq-bars.hot .eq-bar{background:linear-gradient(180deg,#3a0408 0%,#8e1220 65%,#d9313f 100%);}
+
   /* small distant player silhouettes moving on the pitch, over the real photo */
   .pitch-action{position:absolute;inset:0;z-index:2;pointer-events:none;}
   .sil{position:absolute;width:3px;height:7px;background:rgba(8,8,10,0.8);border-radius:1.5px 1.5px 0 0;}
@@ -1157,6 +1170,7 @@
         <div class="flash" style="left:58%;top:10%;animation-delay:0.5s;animation-duration:3.4s;"></div>
         <div class="flash" style="left:32%;top:88%;animation-delay:4.2s;animation-duration:4.4s;"></div>
         <div class="flash" style="left:78%;top:65%;animation-delay:3.6s;animation-duration:5.8s;"></div>
+        <div class="eq-bars" id="eqBars" aria-hidden="true"></div>
         <div class="pitch-action">
           <div class="sil" id="silBowler"></div>
           <div class="sil" id="silBatter"></div>
@@ -1339,6 +1353,13 @@
   <p>Your channel name drifts slowly around the screen at low opacity, so recordings of your stream carry it. For OBS, add <b>?overlay=1&amp;channel=YOURNAME</b> to the page address instead.</p>
   <label class="field-label" for="channelInput">Channel name</label>
   <input class="field-input" id="channelInput" placeholder="e.g. FLOODLIGHT LIVE" maxlength="40" autocomplete="off">
+
+  <hr class="divider">
+
+  <h3>Commentary equalizer</h3>
+  <p>The bars at the top of the ground follow your commentary voice: the louder you shout on a six, the higher they jump. The browser will ask for microphone access once. Without the mic they keep a gentle idle movement and surge on every four, six and wicket.</p>
+  <button class="btn secondary" id="micBtn">Use my microphone</button>
+  <div class="status-note" id="micNote">Microphone off — bars on idle movement.</div>
 
   <hr class="divider">
 
@@ -1770,6 +1791,7 @@
   }
 
   function triggerCelebration(type){
+    eqBoost(type);
     boomLastBall(type);
     playCelebrationSound(type);
     clearTimeout(window.__floodlightReplayTimer);
@@ -2645,5 +2667,106 @@
     $("watermark").textContent = v || DEFAULT_CHANNEL;
     try { if(v) localStorage.setItem("floodlight_channel", v); else localStorage.removeItem("floodlight_channel"); } catch(e){}
   });
+
+  /* ---------------- commentary equalizer ---------------- */
+  var EQ_BAR_COUNT = 22;
+  var eqEl = $("eqBars");
+  var eqBars = [];
+  for(var eqi = 0; eqi < EQ_BAR_COUNT; eqi++){
+    var barEl = document.createElement("div");
+    barEl.className = "eq-bar";
+    eqEl.appendChild(barEl);
+    eqBars.push({el:barEl, v:0.14, phase:Math.random()*Math.PI*2, speed:0.6 + Math.random()*1.4});
+  }
+  var eqBoostLevel = 0;
+  var micAnalyser = null, micFreq = null, micTime = null, micStream = null, micPeak = 0.04;
+  var eqReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function eqBoost(type){
+    eqBoostLevel = Math.max(eqBoostLevel, type === "six" ? 1 : type === "wicket" ? 0.9 : 0.75);
+  }
+
+  // loudness relative to the recent peak, so any mic gain works: normal talk mid-height, shouting full
+  function micLevel(){
+    micAnalyser.getByteTimeDomainData(micTime);
+    var sum = 0;
+    for(var i = 0; i < micTime.length; i++){ var d = (micTime[i] - 128) / 128; sum += d*d; }
+    var rms = Math.sqrt(sum / micTime.length);
+    micPeak = Math.max(micPeak * 0.997, rms, 0.04);
+    return rms < 0.008 ? 0 : Math.min(rms / micPeak, 1);
+  }
+
+  var eqStart = performance.now();
+  function eqFrame(now){
+    var t = (now - eqStart) / 1000;
+    var level = 0;
+    if(micAnalyser){ level = micLevel(); micAnalyser.getByteFrequencyData(micFreq); }
+    eqBoostLevel *= 0.993;
+    var drive = Math.max(level, eqBoostLevel);
+    eqBars.forEach(function(b, i){
+      var idle = 0.16 + 0.07 * Math.sin(t * b.speed * 2 + b.phase);
+      // spread the bars over the voice range (~0-5 kHz)
+      var bin = micFreq ? micFreq[1 + Math.floor(i * micFreq.length * 0.2 / EQ_BAR_COUNT)] / 255
+                        : 0.5 + 0.25 * Math.sin(t * b.speed * 7 + b.phase) + 0.25 * Math.sin(t * 11.3 + i * 1.7);
+      var target = Math.min(1, idle + drive * (0.4 + 0.6 * bin));
+      b.v += (target - b.v) * (target > b.v ? 0.45 : 0.18);
+      b.el.style.transform = "scaleY(" + b.v.toFixed(3) + ")";
+    });
+    eqEl.classList.toggle("hot", drive > 0.55);
+    requestAnimationFrame(eqFrame);
+  }
+  if(!eqReduced) requestAnimationFrame(eqFrame);
+
+  async function startMic(){
+    var note = $("micNote");
+    try{
+      var ctx = ensureAudioCtx();
+      if(!ctx || !navigator.mediaDevices) throw new Error("not supported in this browser");
+      micStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false, noiseSuppression:true, autoGainControl:false}});
+      micAnalyser = ctx.createAnalyser();
+      micAnalyser.fftSize = 256;
+      micAnalyser.smoothingTimeConstant = 0.6;
+      // analyser only, never to the speakers, so the mic doesn't echo
+      ctx.createMediaStreamSource(micStream).connect(micAnalyser);
+      micFreq = new Uint8Array(micAnalyser.frequencyBinCount);
+      micTime = new Uint8Array(micAnalyser.fftSize);
+      note.className = "status-note ok";
+      note.textContent = "Microphone on — bars follow your commentary voice.";
+      $("micBtn").textContent = "Stop microphone";
+      try { localStorage.setItem("floodlight_mic", "1"); } catch(e){}
+    } catch(err){
+      stopMic();
+      note.className = "status-note err";
+      note.textContent = "Couldn't use the microphone (" + err.message + "). Bars stay on idle movement.";
+    }
+  }
+
+  function stopMic(){
+    if(micStream) micStream.getTracks().forEach(function(tr){ tr.stop(); });
+    micStream = null; micAnalyser = null; micFreq = null; micTime = null; micPeak = 0.04;
+    $("micBtn").textContent = "Use my microphone";
+    $("micNote").className = "status-note";
+    $("micNote").textContent = "Microphone off — bars on idle movement.";
+  }
+
+  $("micBtn").addEventListener("click", function(){
+    if(micAnalyser){
+      stopMic();
+      try { localStorage.removeItem("floodlight_mic"); } catch(e){}
+    } else {
+      startMic();
+    }
+  });
+
+  // browsers start audio suspended until the first click or key press
+  function resumeAudioOnGesture(){ if(audioCtx && audioCtx.state === "suspended") audioCtx.resume(); }
+  document.addEventListener("pointerdown", resumeAudioOnGesture);
+  document.addEventListener("keydown", resumeAudioOnGesture);
+
+  try{
+    if(localStorage.getItem("floodlight_mic") === "1" && navigator.permissions){
+      navigator.permissions.query({name:"microphone"}).then(function(p){ if(p.state === "granted") startMic(); }).catch(function(){});
+    }
+  } catch(e){}
 })();
 </script>
