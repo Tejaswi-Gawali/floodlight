@@ -1957,7 +1957,7 @@
 
     setTimeout(function(){
       box.classList.remove("boom", typeClass);
-      label.textContent = originalText;
+      label.textContent = label.dataset.value || originalText;
     }, 3000);
   }
 
@@ -2236,11 +2236,13 @@
     if(lastBall === "—"){
       // no ball-by-ball feed: show the broadcast idle states instead of a dash
       var overDone = oversToBalls(m.score.overs) > 0 && oversToBalls(m.score.overs) % 6 === 0;
-      pulseText(lbEl, overDone ? "OVER" : "BALL");
+      lbEl.dataset.value = overDone ? "OVER" : "BALL";
+      pulseText(lbEl, lbEl.dataset.value);
       lbEl.parentNode.classList.add("lb-word");
       lbEl.parentNode.classList.toggle("lb-over", overDone);
     } else {
       lbEl.parentNode.classList.remove("lb-word", "lb-over");
+      lbEl.dataset.value = lastBall;
       pulseText(lbEl, lastBall);
     }
     updateCommentary(m, lastBall, m._lastFacedBatter || (m.batters[0] && m.batters[0].name));
