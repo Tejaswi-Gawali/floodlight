@@ -935,6 +935,98 @@
     .watermark-x{top:45vh;left:35vw;}
   }
 
+  /* ---------- between-overs graphics: scorecard / team sheets / summary ---------- */
+  .interstitial{
+    position:fixed;left:0;right:0;top:0;bottom:52px;z-index:62;
+    display:flex;align-items:center;justify-content:center;padding:18px;
+    background:rgba(3,6,18,0.6);backdrop-filter:blur(3px);
+  }
+  .interstitial.ix-in{animation:ix-backdrop 0.3s ease-out;}
+  .interstitial.ix-out{animation:ix-fade 0.4s ease-in forwards;}
+  @keyframes ix-backdrop{from{opacity:0;}to{opacity:1;}}
+  @keyframes ix-fade{to{opacity:0;}}
+  .ix-panel{
+    position:relative;width:min(1180px,96vw);max-height:100%;overflow:auto;scrollbar-width:none;
+    background:linear-gradient(160deg,#0a1a52 0%,#140a3c 60%,#0a0f2c 100%);
+    border:2px solid rgba(231,184,74,0.75);border-radius:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+  .ix-panel::-webkit-scrollbar{display:none;}
+  .interstitial.ix-in .ix-panel{animation:ix-pop 0.55s cubic-bezier(.2,1.25,.3,1);}
+  @keyframes ix-pop{from{transform:translateY(26px) scale(0.95);opacity:0;}to{transform:none;opacity:1;}}
+  .ix-head{
+    display:flex;align-items:center;gap:16px;padding:14px 20px;border-radius:14px 14px 0 0;
+    background:linear-gradient(100deg,#6e0a14 0%,#c81f2f 55%,#8e1220 100%);
+  }
+  .ix-head.neutral{background:linear-gradient(100deg,#0b2f7a 0%,#1f63d6 55%,#0f3a96 100%);}
+  .ix-badge{
+    width:84px;height:58px;flex-shrink:0;border:3px solid var(--six);border-radius:6px;overflow:hidden;
+    background:#0a1220;display:flex;align-items:center;justify-content:center;
+  }
+  .ix-badge img{width:100%;height:100%;display:block;}
+  .ix-badge svg{width:70%;height:90%;}
+  .ix-head-text{min-width:0;}
+  .ix-kicker{font-family:"Teko",sans-serif;font-size:18px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.8);line-height:1;}
+  .ix-title{font-family:"Teko",sans-serif;font-size:42px;font-weight:700;text-transform:uppercase;color:#fff;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ix-total{margin-left:auto;font-family:"Teko",sans-serif;font-size:56px;font-weight:700;color:#fff;line-height:1;transform:skewX(-8deg);white-space:nowrap;text-shadow:0 3px 0 rgba(0,0,0,0.4);}
+  .ix-total small{font-size:24px;color:var(--six);}
+  .ix-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:20px;padding:16px 20px 18px;}
+  .ix-col-title{font-family:"Teko",sans-serif;font-size:22px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--six);margin-bottom:4px;}
+  .ix-table{width:100%;border-collapse:collapse;font-family:"Teko",sans-serif;font-size:21px;color:#fff;}
+  .ix-table th{font-size:15px;font-weight:600;color:rgba(255,255,255,0.6);text-align:right;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.2);letter-spacing:0.06em;}
+  .ix-table td{padding:5px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.07);}
+  .ix-table th:first-child, .ix-table td:first-child{text-align:left;}
+  .ix-table td.ix-name{font-weight:600;letter-spacing:0.02em;line-height:1.05;}
+  .ix-dis{display:block;font-family:"Work Sans",sans-serif;font-size:11px;font-weight:400;color:rgba(255,255,255,0.55);letter-spacing:0;}
+  .ix-table td.ix-r{font-weight:700;}
+  .ix-table tr.live td{color:var(--six);}
+  .ix-table tr.live .ix-dis{color:rgba(231,184,74,0.85);}
+  .ix-table tr.ix-sum td{border-bottom:none;color:rgba(255,255,255,0.75);font-size:18px;}
+  .ix-table tr.ix-total-row td{font-size:25px;font-weight:700;border-top:1px solid rgba(255,255,255,0.25);border-bottom:none;}
+  .ix-squads{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:16px 20px 18px;}
+  .ix-team-head{
+    display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:10px;margin-bottom:6px;
+    background:linear-gradient(100deg,#6e0a14,#c81f2f);
+  }
+  .ix-team-head.bowl{background:linear-gradient(100deg,#0b2f7a,#1f63d6);}
+  .ix-team-head .ix-badge, .ix-inn-row .ix-badge{width:62px;height:42px;border-width:2px;}
+  .ix-team-name{font-family:"Teko",sans-serif;font-size:28px;font-weight:700;text-transform:uppercase;color:#fff;line-height:1;}
+  .ix-list.two-col{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;}
+  .ix-player{display:flex;align-items:center;gap:10px;padding:5px 10px;border-bottom:1px solid rgba(255,255,255,0.08);font-family:"Teko",sans-serif;font-size:22px;color:#fff;min-width:0;}
+  .ix-num{width:22px;flex-shrink:0;color:rgba(255,255,255,0.45);}
+  .ix-pname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ix-tag{color:var(--six);font-size:17px;}
+  .ix-role{margin-left:auto;flex-shrink:0;font-family:"Work Sans",sans-serif;font-size:10.5px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.06em;}
+  .ix-summary{display:flex;flex-direction:column;gap:12px;padding:18px 22px 20px;}
+  .ix-inn-row{display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.05);font-family:"Teko",sans-serif;color:#fff;}
+  .ix-inn-row.current{box-shadow:inset 0 0 0 2px var(--six);background:rgba(231,184,74,0.08);}
+  .ix-inn-team{font-size:28px;font-weight:600;text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ix-inn-score{margin-left:auto;font-size:42px;font-weight:700;line-height:1;transform:skewX(-8deg);white-space:nowrap;}
+  .ix-inn-score small{font-size:20px;color:var(--six);}
+  .ix-inn-row.pending .ix-inn-score{font-size:26px;color:rgba(255,255,255,0.6);}
+  .ix-equation{font-family:"Teko",sans-serif;font-size:32px;font-weight:600;color:#ffab1f;text-align:center;padding:8px 12px;border-radius:10px;background:rgba(200,31,47,0.22);letter-spacing:0.02em;}
+  .ix-meta{font-family:"Work Sans",sans-serif;font-size:13px;color:rgba(255,255,255,0.7);text-align:center;}
+  .ix-progress{height:4px;background:rgba(255,255,255,0.1);border-radius:0 0 14px 14px;overflow:hidden;}
+  .ix-progress span{display:block;height:100%;background:var(--six);transform-origin:left center;}
+  @keyframes ix-progress{from{transform:scaleX(1);}to{transform:scaleX(0);}}
+  .btn-row{display:flex;gap:8px;margin-top:8px;}
+  .btn-row .btn{flex:1;margin-top:0;padding:10px 6px;font-size:12.5px;}
+  select.field-input option{background:#0b1422;color:#fff;}
+  @media (max-width:760px){
+    .interstitial{bottom:44px;padding:8px;}
+    .ix-grid, .ix-squads{grid-template-columns:1fr;}
+    .ix-list.two-col{grid-template-columns:1fr;}
+    .ix-head{padding:10px 12px;gap:10px;}
+    .ix-badge{width:60px;height:42px;}
+    .ix-title{font-size:28px;}
+    .ix-total{font-size:34px;}
+    .ix-total small{font-size:16px;}
+    .ix-table{font-size:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .interstitial.ix-in, .interstitial.ix-in .ix-panel{animation:none;}
+  }
+
   body.has-ticker{padding-bottom:58px;}
   .bcast-ticker{
     position:fixed;left:0;right:0;bottom:0;z-index:60;
@@ -1475,6 +1567,25 @@
 
   <hr class="divider">
 
+  <h3>Between-overs graphics</h3>
+  <p>Like a TV broadcast, a full scorecard, the team sheets and a match summary take turns filling the screen for 15 seconds. Keys: <b>S</b> scorecard, <b>T</b> teams, <b>M</b> summary, <b>Esc</b> close. For OBS add <b>&amp;breaks=3</b> (minutes) to the address, or <b>&amp;breaks=0</b> to switch them off.</p>
+  <label class="field-label" for="breakSelect">Show one every</label>
+  <select class="field-input" id="breakSelect">
+    <option value="0">Off</option>
+    <option value="2">2 minutes</option>
+    <option value="3">3 minutes</option>
+    <option value="5">5 minutes</option>
+    <option value="8">8 minutes</option>
+  </select>
+  <div class="btn-row">
+    <button class="btn secondary" id="breakScoreBtn">Scorecard now</button>
+    <button class="btn secondary" id="breakTeamsBtn">Teams now</button>
+    <button class="btn secondary" id="breakSummaryBtn">Summary now</button>
+  </div>
+  <div class="status-note" id="breakNote"></div>
+
+  <hr class="divider">
+
   <h3>Commentary equalizer</h3>
   <p>The bars at the top of the ground follow your commentary voice: the louder you shout on a six, the higher they jump. The browser will ask for microphone access once. Without the mic they keep a gentle idle movement and surge on every four, six and wicket.</p>
   <button class="btn secondary" id="micBtn">Use my microphone</button>
@@ -1498,6 +1609,13 @@
 
 <div class="watermark-x" aria-hidden="true"><div class="watermark-y"><div class="watermark" id="watermark">FLOODLIGHT</div></div></div>
 
+<div class="interstitial" id="interstitial" hidden aria-live="polite">
+  <div class="ix-panel">
+    <div id="ixContent"></div>
+    <div class="ix-progress"><span id="ixProgress"></span></div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -1512,7 +1630,7 @@
       score:{runs:142, wkts:5, overs:"16.3"}, target:191, crr:8.60, rrr:11.14,
       ballsRemaining:21,
       batters:[{name:"A. Sandhu", stat:"58 (39)", strike:true, fours:6, six:2, sr:148.7},{name:"H. Dhillon", stat:"21 (18)", strike:false, fours:2, six:0, sr:116.7}],
-      bowler:{name:"R. Bajwa", stat:"3.3-0-29-2", econ:8.29},
+      bowler:{name:"D. Toor", stat:"3.3-0-29-2", econ:8.29}, venue:"Bhatinda Cricket Ground",
       thisOver:["6",".","2"],
       prevOver:["4","1","W",".","2","1"],
       partnership:{runs:24, balls:15},
@@ -1562,7 +1680,7 @@
       score:{runs:52, wkts:1, overs:"5.4"}, target:null, crr:9.18, rrr:null,
       ballsRemaining:null,
       batters:[{name:"R. Sharma", stat:"31 (19)", strike:true, fours:4, six:1, sr:163.2},{name:"I. Kishan", stat:"17 (16)", strike:false, fours:2, six:0, sr:106.3}],
-      bowler:{name:"D. Chahar", stat:"2-0-18-1", econ:9.00},
+      bowler:{name:"D. Chahar", stat:"2-0-18-1", econ:9.00}, venue:"Wankhede Stadium, Mumbai",
       thisOver:["1","4",".","6"],
       prevOver:[".","4","1","6",".","1"],
       partnership:{runs:48, balls:35},
@@ -1906,7 +2024,9 @@
     boomLastBall(type);
   }
 
+  var lastCelebrationAt = 0;
   function triggerCelebration(type){
+    lastCelebrationAt = Date.now();
     eqBoost(type);
     boomLastBall(type);
     playCelebrationSound(type);
@@ -2252,7 +2372,7 @@
     renderHero(m);
     renderScorecard(m);
     renderPoints(m);
-    if(!m.isDemo) fetchMatchScorecard(m);
+    if(!m.isDemo){ fetchMatchScorecard(m); fetchMatchSquad(m); }
     renderRefreshNote();
   }
 
@@ -2264,8 +2384,25 @@
   };
   // bowling attack each demo innings rotates through, one over at a time (T20: max 4 overs each)
   var DEMO_BOWLERS = {
-    "m1":["R. Bajwa","V. Randhawa","K. Chahal","M. Uppal","S. Bhullar"],
+    "m1":["D. Toor","P. Sidhu","K. Mehra","J. Grewal","A. Gill"],
     "m2":["D. Chahar","T. Deshpande","M. Theekshana","M. Pathirana","R. Ashwin"]
+  };
+  // playing XIs for the fictional demo league (m2 uses real IPL names, so no invented lineup there)
+  var DEMO_SQUADS = {
+    "m1":{
+      "Bhatinda Royals":[
+        {name:"A. Sandhu", role:"Batter", tag:"c"}, {name:"H. Dhillon", role:"Batter"}, {name:"N. Kalra", role:"Batter"},
+        {name:"I. Brar", role:"WK-Batter", tag:"wk"}, {name:"G. Sekhon", role:"Allrounder"}, {name:"T. Mann", role:"Allrounder"},
+        {name:"R. Bajwa", role:"Bowler"}, {name:"V. Randhawa", role:"Bowler"}, {name:"K. Chahal", role:"Bowler"},
+        {name:"M. Uppal", role:"Bowler"}, {name:"S. Bhullar", role:"Bowler"}
+      ],
+      "Jalandhar Warriors":[
+        {name:"K. Mehra", role:"Batter", tag:"c"}, {name:"S. Aulakh", role:"Batter"}, {name:"J. Grewal", role:"Allrounder"},
+        {name:"P. Sidhu", role:"Allrounder"}, {name:"R. Khosla", role:"WK-Batter", tag:"wk"}, {name:"B. Virk", role:"Batter"},
+        {name:"L. Sahni", role:"Allrounder"}, {name:"D. Toor", role:"Bowler"}, {name:"A. Gill", role:"Bowler"},
+        {name:"M. Bains", role:"Bowler"}, {name:"J. Cheema", role:"Bowler"}
+      ]
+    }
   };
   var DEMO_MAX_BALLS_PER_BOWLER = 24;
   var demoSimState = {};
@@ -2652,7 +2789,8 @@
       matchType: String(m.matchType||"").toLowerCase(),
       batters:[{name:"—",stat:"",strike:false},{name:"—",stat:"",strike:false}],
       bowler:{name:"—",stat:""}, thisOver:[], prevOver:[], partnership:null, lastWicket:null, winProb:null,
-      scorecards:{}, cricapiId: m.id, fantasyEnabled: !!m.fantasyEnabled,
+      scorecards: (scorecardCache[m.id] && scorecardCache[m.id].data) || {}, squads: squadCache[m.id] || null,
+      cricapiId: m.id, fantasyEnabled: !!m.fantasyEnabled, hasSquad: !!m.hasSquad, venue: m.venue || "",
       allInnings: scores
     };
   }
@@ -2675,10 +2813,18 @@
     return parts.length ? parts.join(", ") : "—";
   }
 
+  // each poll rebuilds the match objects, so fetched scorecards/squads live here, keyed by CricAPI match id
+  var scorecardCache = {};
+  var squadCache = {};
+  var squadFetchState = {};
+  var SCORECARD_REFRESH_MS = 15 * 60000;
+
   async function fetchMatchScorecard(m){
     if(!m.fantasyEnabled || !m.cricapiId || !activeCricketKey) return;
     var state = scorecardFetchState[m.cricapiId];
-    if(state === "loading" || state === "done" || state === "unavailable") return;
+    if(state === "loading" || state === "unavailable") return;
+    var cached = scorecardCache[m.cricapiId];
+    if(cached && Date.now() - cached.at < SCORECARD_REFRESH_MS) return;
     scorecardFetchState[m.cricapiId] = "loading";
     try{
       var res = await fetch("https://api.cricapi.com/v1/match_scorecard?apikey=" + encodeURIComponent(activeCricketKey) + "&id=" + encodeURIComponent(m.cricapiId));
@@ -2709,11 +2855,34 @@
           batting: batting, bowling: bowling
         };
       });
+      scorecardCache[m.cricapiId] = {data: scorecards, at: Date.now()};
       m.scorecards = scorecards;
-      scorecardFetchState[m.cricapiId] = "done";
+      scorecardFetchState[m.cricapiId] = "idle";
       if(activeSport==="cricket" && activeId===m.id) renderScorecard(m);
     } catch(err){
       scorecardFetchState[m.cricapiId] = "unavailable";
+    }
+  }
+
+  async function fetchMatchSquad(m){
+    if(!m.hasSquad || !m.cricapiId || !activeCricketKey) return;
+    if(squadCache[m.cricapiId] || squadFetchState[m.cricapiId]) return;
+    squadFetchState[m.cricapiId] = "loading";
+    try{
+      var res = await fetch("https://api.cricapi.com/v1/match_squad?apikey=" + encodeURIComponent(activeCricketKey) + "&id=" + encodeURIComponent(m.cricapiId));
+      var json = await res.json();
+      if(json.info) lastCricketInfo = json.info;
+      if(json.status !== "success" || !Array.isArray(json.data)){ squadFetchState[m.cricapiId] = "unavailable"; return; }
+      var squads = {};
+      json.data.forEach(function(team){
+        var teamName = matchTeamFromInning(team.teamName || "", [m.teamA, m.teamB]);
+        squads[teamName] = (team.players || []).map(function(p){ return {name: p.name || "—", role: p.role || ""}; });
+      });
+      squadCache[m.cricapiId] = squads;
+      m.squads = squads;
+      squadFetchState[m.cricapiId] = "done";
+    } catch(err){
+      squadFetchState[m.cricapiId] = "unavailable";
     }
   }
 
@@ -2927,5 +3096,223 @@
       navigator.permissions.query({name:"microphone"}).then(function(p){ if(p.state === "granted") startMic(); }).catch(function(){});
     }
   } catch(e){}
+
+  /* ---------------- between-overs graphics (scorecard / team sheets / summary) ---------------- */
+  var BREAK_SHOW_MS = 15000;
+  var BREAK_TYPES = ["scorecard", "squads", "summary"];
+  var breakEveryMin = 3;
+  var breakTimer = null, breakHideTimer = null, breakTypeIdx = 0;
+  try{
+    var breaksParam = new URLSearchParams(window.location.search).get("breaks");
+    var breaksSaved = localStorage.getItem("floodlight_breaks");
+    var breaksRaw = breaksParam !== null ? breaksParam : breaksSaved;
+    if(breaksRaw !== null && breaksRaw !== "" && !isNaN(+breaksRaw)) breakEveryMin = Math.max(0, +breaksRaw);
+  } catch(e){}
+
+  function matchSquads(m){ return m.squads || DEMO_SQUADS[m.id] || null; }
+  function otherTeam(m, team){ return team === m.teamA ? m.teamB : m.teamA; }
+
+  function ixBadge(m, team){
+    var url = teamBadgeUrl(m, team);
+    if(!url) return '<span class="ix-badge">' + teamCrestSVG(teamCode(team).slice(0,2)) + '</span>';
+    var fit = (url.indexOf("flagcdn.com") !== -1 || url.indexOf("data:image/svg") === 0) ? "cover" : "contain";
+    return '<span class="ix-badge"><img src="' + esc(url) + '" alt="" style="object-fit:' + fit + ';"></span>';
+  }
+
+  function ixHead(style, kicker, title, totalHtml, badgeHtml){
+    return '<div class="ix-head ' + style + '">' + (badgeHtml || '') +
+      '<div class="ix-head-text"><div class="ix-kicker">' + esc(kicker) + '</div><div class="ix-title">' + esc(title) + '</div></div>' +
+      (totalHtml ? '<div class="ix-total">' + totalHtml + '</div>' : '') + '</div>';
+  }
+
+  // put the live batters' current figures on top of the (less often refreshed) scorecard rows
+  function liveBattingRows(m, rows){
+    var live = {};
+    (m.batters || []).forEach(function(b){ if(b && b.name && b.name !== "—") live[b.name] = b; });
+    function fromLive(name){
+      var lb = live[name], st = parseBatStat(lb.stat);
+      return {name:name, dismissal:"not out", r:+st.runs || 0, b:+st.balls || 0, fours:lb.fours || 0, six:lb.six || 0, sr:lb.sr || 0, live:true, strike:!!lb.strike};
+    }
+    var seen = {};
+    var out = rows.map(function(r){
+      if(live[r.name]){ seen[r.name] = true; return fromLive(r.name); }
+      return r.dismissal === "batting" ? Object.assign({}, r, {dismissal:"out"}) : r;
+    });
+    Object.keys(live).forEach(function(n){ if(!seen[n]) out.push(fromLive(n)); });
+    return out;
+  }
+
+  function breakAvailable(type, m){
+    if(type === "scorecard"){
+      var d = m.scorecards && m.scorecards[m.battingNow];
+      return !!(d && d.batting && d.batting.length);
+    }
+    if(type === "squads"){
+      var sq = matchSquads(m);
+      return !!(sq && Object.keys(sq).length);
+    }
+    return true;
+  }
+
+  function breakScorecardHTML(m){
+    var team = m.battingNow, d = m.scorecards[team];
+    var order = (m.inningsOrder && m.inningsOrder.length) ? m.inningsOrder : [m.teamA, m.teamB];
+    var innNo = (order.indexOf(team) + 1) || 1;
+    var bat = liveBattingRows(m, d.batting).map(function(r){
+      return '<tr class="' + (r.live ? 'live' : '') + '"><td class="ix-name">' + esc(r.name) + (r.strike ? ' *' : '') +
+        '<span class="ix-dis">' + esc(r.dismissal || "") + '</span></td>' +
+        '<td class="ix-r">' + r.r + '</td><td>' + r.b + '</td><td>' + r.fours + '</td><td>' + r.six + '</td><td>' + (+r.sr || 0).toFixed(1) + '</td></tr>';
+    }).join("");
+    var scoreNow = m.score.runs + "/" + m.score.wkts;
+    bat += '<tr class="ix-sum"><td>Extras</td><td colspan="5">' + esc(d.extras || "—") + '</td></tr>' +
+      '<tr class="ix-total-row"><td>Total</td><td colspan="5">' + scoreNow + ' (' + esc(m.score.overs) + ' ov)</td></tr>';
+    var bowl = (d.bowling || []).map(function(b){
+      return '<tr><td class="ix-name">' + esc(b.name) + '</td><td>' + esc(String(b.o)) + '</td><td>' + b.m + '</td><td>' + b.r + '</td><td class="ix-r">' + b.w + '</td><td>' + (+b.econ || 0).toFixed(2) + '</td></tr>';
+    }).join("") || '<tr><td colspan="6">No bowling figures yet</td></tr>';
+    return ixHead("", "Scorecard · Innings " + innNo, team, scoreNow + ' <small>(' + esc(m.score.overs) + ' ov)</small>', ixBadge(m, team)) +
+      '<div class="ix-grid">' +
+        '<div><div class="ix-col-title">Batting</div><table class="ix-table"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>' + bat + '</table></div>' +
+        '<div><div class="ix-col-title">Bowling · ' + esc(otherTeam(m, team)) + '</div><table class="ix-table"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr>' + bowl + '</table></div>' +
+      '</div>';
+  }
+
+  function breakSquadsHTML(m){
+    var sq = matchSquads(m);
+    var first = m.battingNow || m.teamA;
+    var teams = [first, otherTeam(m, first)];
+    var cols = teams.map(function(t, idx){
+      var list = sq[t] || [];
+      var players = list.map(function(p, i){
+        return '<div class="ix-player"><span class="ix-num">' + (i + 1) + '</span><span class="ix-pname">' + esc(p.name) +
+          (p.tag ? ' <span class="ix-tag">(' + esc(p.tag) + ')</span>' : '') + '</span><span class="ix-role">' + esc(p.role || "") + '</span></div>';
+      }).join("") || '<div class="ix-player"><span class="ix-pname">Squad not announced yet</span></div>';
+      return '<div><div class="ix-team-head ' + (idx === 0 ? '' : 'bowl') + '">' + ixBadge(m, t) + '<span class="ix-team-name">' + esc(t) + '</span></div>' +
+        '<div class="ix-list' + (list.length > 12 ? ' two-col' : '') + '">' + players + '</div></div>';
+    }).join("");
+    return ixHead("neutral", m.squads ? "Squads" : "Playing XI", m.teamA + " vs " + m.teamB, "", "") + '<div class="ix-squads">' + cols + '</div>';
+  }
+
+  function breakInnings(m){
+    var teams = [m.teamA, m.teamB];
+    if(m.allInnings && m.allInnings.length){
+      var list = m.allInnings.map(function(inn, i){
+        return {team: matchTeamFromInning(inn.inning, teams), text: inn.r + "/" + inn.w, overs: inn.o, current: i === m.allInnings.length - 1};
+      });
+      teams.forEach(function(t){ if(!list.some(function(r){ return r.team === t; })) list.push({team:t, text:"Yet to bat", overs:"", pending:true}); });
+      return list;
+    }
+    var order = (m.inningsOrder && m.inningsOrder.length) ? m.inningsOrder : teams;
+    return order.map(function(t){
+      if(t === m.battingNow) return {team:t, text:m.score.runs + "/" + m.score.wkts, overs:m.score.overs, current:true};
+      var sc = m.scorecards && m.scorecards[t];
+      var mt = sc && sc.batting && sc.batting.length ? String(sc.total || "").match(/^(\d+\/\d+)\s*\(([^)]+)\)/) : null;
+      return mt ? {team:t, text:mt[1], overs:mt[2]} : {team:t, text:"Yet to bat", overs:"", pending:true};
+    });
+  }
+
+  function breakSummaryHTML(m){
+    var rows = breakInnings(m).map(function(r){
+      return '<div class="ix-inn-row' + (r.current ? ' current' : '') + (r.pending ? ' pending' : '') + '">' + ixBadge(m, r.team) +
+        '<span class="ix-inn-team">' + esc(r.team) + '</span><span class="ix-inn-score">' + esc(r.text) +
+        (r.overs !== "" && r.overs != null ? ' <small>(' + esc(String(r.overs)) + ' ov)</small>' : '') + '</span></div>';
+    }).join("");
+    var eq = "";
+    if(m.target && m.ballsRemaining){
+      eq = esc(m.battingNow) + ' need ' + Math.max(m.target - m.score.runs, 0) + ' runs from ' + m.ballsRemaining + ' balls' + (m.rrr ? ' · RRR ' + m.rrr.toFixed(2) : '');
+    }
+    var meta = [m.sub, m.venue, m.comp].filter(Boolean).map(esc).join(" · ");
+    return ixHead("neutral", "Match summary", m.teamA + " vs " + m.teamB, "", "") +
+      '<div class="ix-summary">' + rows + (eq ? '<div class="ix-equation">' + eq + '</div>' : '') + (meta ? '<div class="ix-meta">' + meta + '</div>' : '') + '</div>';
+  }
+
+  // shrink the card to fit the screen (e.g. a long scorecard on a 720p stream), but not below 60%
+  function fitBreakPanel(){
+    var el = $("interstitial"), panel = el.querySelector(".ix-panel");
+    panel.style.zoom = "";
+    panel.scrollTop = 0;
+    var cs = getComputedStyle(el);
+    var avail = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    var need = panel.scrollHeight;
+    if(need > avail) panel.style.zoom = String(Math.max(0.6, avail / need));
+  }
+
+  function showBreak(type){
+    if(activeSport !== "cricket") return false;
+    var m = findActiveMatch();
+    if(!breakAvailable(type, m)) return false;
+    $("ixContent").innerHTML = type === "scorecard" ? breakScorecardHTML(m) : type === "squads" ? breakSquadsHTML(m) : breakSummaryHTML(m);
+    var el = $("interstitial");
+    el.hidden = false;
+    fitBreakPanel();
+    el.classList.remove("ix-out", "ix-in");
+    void el.offsetWidth;
+    el.classList.add("ix-in");
+    var bar = $("ixProgress");
+    bar.style.animation = "none";
+    void bar.offsetWidth;
+    bar.style.animation = "ix-progress " + BREAK_SHOW_MS + "ms linear forwards";
+    clearTimeout(breakTimer);
+    clearTimeout(breakHideTimer);
+    breakHideTimer = setTimeout(hideBreak, BREAK_SHOW_MS);
+    return true;
+  }
+
+  function hideBreak(){
+    var el = $("interstitial");
+    clearTimeout(breakHideTimer);
+    if(el.hidden) return;
+    el.classList.remove("ix-in");
+    el.classList.add("ix-out");
+    setTimeout(function(){ el.hidden = true; el.classList.remove("ix-out"); }, 400);
+    scheduleBreak();
+  }
+
+  function scheduleBreak(delayMs){
+    clearTimeout(breakTimer);
+    if(!breakEveryMin) return;
+    breakTimer = setTimeout(runScheduledBreak, delayMs != null ? delayMs : breakEveryMin * 60000);
+  }
+
+  function runScheduledBreak(){
+    // don't cover a boundary or wicket celebration; try again shortly
+    if(Date.now() - lastCelebrationAt < 5000){ scheduleBreak(5000); return; }
+    for(var k = 0; k < BREAK_TYPES.length; k++){
+      var idx = (breakTypeIdx + k) % BREAK_TYPES.length;
+      if(showBreak(BREAK_TYPES[idx])){ breakTypeIdx = (idx + 1) % BREAK_TYPES.length; return; }
+    }
+    scheduleBreak();
+  }
+
+  function manualBreak(type, label){
+    closeDrawer();
+    if(showBreak(type)){
+      $("breakNote").textContent = "";
+    } else {
+      $("breakNote").textContent = label + " isn't available for this match — the live feed doesn't provide it.";
+    }
+  }
+
+  $("interstitial").addEventListener("click", hideBreak);
+  $("breakSelect").value = String(breakEveryMin);
+  if($("breakSelect").value !== String(breakEveryMin)) $("breakSelect").value = "3";
+  $("breakSelect").addEventListener("change", function(){
+    breakEveryMin = +this.value;
+    try { localStorage.setItem("floodlight_breaks", this.value); } catch(e){}
+    scheduleBreak();
+  });
+  $("breakScoreBtn").addEventListener("click", function(){ manualBreak("scorecard", "The full scorecard"); });
+  $("breakTeamsBtn").addEventListener("click", function(){ manualBreak("squads", "The team sheet"); });
+  $("breakSummaryBtn").addEventListener("click", function(){ manualBreak("summary", "The summary"); });
+  document.addEventListener("keydown", function(e){
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+    var tag = (e.target && e.target.tagName) || "";
+    if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    var k = (e.key || "").toLowerCase();
+    if(k === "escape") hideBreak();
+    else if(k === "s") showBreak("scorecard");
+    else if(k === "t") showBreak("squads");
+    else if(k === "m") showBreak("summary");
+  });
+  scheduleBreak(Math.min(45000, breakEveryMin * 60000));
 })();
 </script>
