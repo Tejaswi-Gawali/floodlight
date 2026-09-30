@@ -1200,6 +1200,7 @@
     border:1px solid var(--panel-line);color:var(--text);font-size:13.5px;margin-bottom:14px;
     font-family:"Work Sans",sans-serif;
   }
+  .key-input{resize:vertical;min-height:62px;line-height:1.45;font-family:ui-monospace,Consolas,monospace;font-size:12px;}
   .field-input:focus-visible{outline:2px solid var(--six);outline-offset:1px;}
   .btn{
     width:100%;padding:11px;border-radius:9px;border:none;cursor:pointer;
@@ -1552,8 +1553,8 @@
   <h3>Cricket data</h3>
   <p>Browsers can't read Google's scorecards or scrape scoreboard sites directly (CORS blocks it), but cricket data APIs work fine. Sign up free at <b>cricketdata.org/signup.aspx</b> (formerly CricAPI, no card needed) to get a key.</p>
   <p style="margin-top:-8px;">Free tier is capped at 100 requests/day, so once connected this refreshes as often as once a minute and automatically slows down so your remaining hits last the whole match. The current interval is shown next to the live matches. Faster refresh needs a paid plan (see below).</p>
-  <label class="field-label" for="apiKeyInput">CricAPI / Cricket Data key</label>
-  <input class="field-input" id="apiKeyInput" placeholder="Paste your free API key" autocomplete="off">
+  <label class="field-label" for="apiKeyInput">CricAPI / Cricket Data key(s)</label>
+  <textarea class="field-input key-input" id="apiKeyInput" rows="3" placeholder="One key, or several — one per line or separated by commas" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn" id="goLiveBtn">Fetch live cricket match</button>
   <button class="btn secondary" id="demoBtn">Stay in demo mode</button>
   <div class="status-note" id="statusNote">No key saved yet — running on demo data.</div>
@@ -2686,7 +2687,50 @@
   var CRICKET_PROXY_URL = "";
   var cricketPollTimer = null;
   var cricketPollGen = 0;
-  var lastCricketInfo = null;
+
+  // several CricAPI keys can be pasted together; each request uses the key with the most hits left
+  var cricketKeys = [];
+  var keyQuota = {};           // key -> {used, limit, at, exhaustedAt}
+  var KEY_RETRY_MS = 60 * 60000; // an exhausted key is tried again after an hour, in case its daily quota has reset
+
+  function parseKeys(raw){
+    var seen = {};
+    return String(raw || "").split(/[\s,;]+/).filter(function(k){
+      if(!k || seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+  }
+  function keyHitsLeft(k){
+    var q = keyQuota[k];
+    if(!q) return 100;
+    if(q.exhaustedAt) return Date.now() - q.exhaustedAt > KEY_RETRY_MS ? 1 : 0;
+    return Math.max(q.limit - q.used, 0);
+  }
+  function pickCricketKey(exclude){
+    var best = null, bestLeft = 0;
+    cricketKeys.forEach(function(k){
+      if(exclude && exclude.indexOf(k) !== -1) return;
+      var left = keyHitsLeft(k);
+      if(left > bestLeft){ best = k; bestLeft = left; }
+    });
+    return best;
+  }
+  function recordKeyInfo(k, info){
+    if(!k || !info || !info.hitsLimit) return;
+    var used = info.hitsToday || 0;
+    keyQuota[k] = {used: used, limit: info.hitsLimit, at: Date.now(), exhaustedAt: used >= info.hitsLimit ? Date.now() : 0};
+  }
+  function markKeyExhausted(k){
+    var q = keyQuota[k] || {limit: 100};
+    keyQuota[k] = {used: q.limit, limit: q.limit, at: Date.now(), exhaustedAt: Date.now()};
+  }
+  function totalHitsLeft(){
+    return cricketKeys.reduce(function(sum, k){
+      var q = keyQuota[k];
+      return sum + (q && q.exhaustedAt ? 0 : keyHitsLeft(k));
+    }, 0);
+  }
   var cricketRefreshEveryMs = null;
   var MIN_PER_OVER = {odi:3.6, t20:4.2, t10:4.2};
 
@@ -2713,9 +2757,8 @@
 
   function nextCricketPollMs(){
     if(CRICKET_PROXY_URL) return CRICKET_POLL_MS;
-    var info = lastCricketInfo;
-    if(!info || !info.hitsLimit) return CRICKET_POLL_MS;
-    var hitsLeft = info.hitsLimit - (info.hitsToday || 0);
+    if(!cricketKeys.length) return CRICKET_POLL_MS;
+    var hitsLeft = totalHitsLeft();
     if(hitsLeft <= 0) return 30 * 60000;
     var mins = estimateMatchMinutesLeft(cricketRealMatches);
     if(!mins) return CRICKET_POLL_MAX_MS;
@@ -2796,7 +2839,6 @@
   }
 
   var scorecardFetchState = {};
-  var activeCricketKey = null;
   var lastGoodCricket = {};
 
   function formatExtrasObj(obj){
@@ -2820,15 +2862,18 @@
   var SCORECARD_REFRESH_MS = 15 * 60000;
 
   async function fetchMatchScorecard(m){
-    if(!m.fantasyEnabled || !m.cricapiId || !activeCricketKey) return;
+    if(!m.fantasyEnabled || !m.cricapiId || !cricketKeys.length) return;
     var state = scorecardFetchState[m.cricapiId];
     if(state === "loading" || state === "unavailable") return;
     var cached = scorecardCache[m.cricapiId];
     if(cached && Date.now() - cached.at < SCORECARD_REFRESH_MS) return;
+    var scKey = pickCricketKey();
+    if(!scKey) return;
     scorecardFetchState[m.cricapiId] = "loading";
     try{
-      var res = await fetch("https://api.cricapi.com/v1/match_scorecard?apikey=" + encodeURIComponent(activeCricketKey) + "&id=" + encodeURIComponent(m.cricapiId));
+      var res = await fetch("https://api.cricapi.com/v1/match_scorecard?apikey=" + encodeURIComponent(scKey) + "&id=" + encodeURIComponent(m.cricapiId));
       var json = await res.json();
+      recordKeyInfo(scKey, json.info);
       if(json.status !== "success" || !json.data || !json.data.scorecard){
         scorecardFetchState[m.cricapiId] = "unavailable";
         return;
@@ -2865,13 +2910,15 @@
   }
 
   async function fetchMatchSquad(m){
-    if(!m.hasSquad || !m.cricapiId || !activeCricketKey) return;
+    if(!m.hasSquad || !m.cricapiId || !cricketKeys.length) return;
     if(squadCache[m.cricapiId] || squadFetchState[m.cricapiId]) return;
+    var sqKey = pickCricketKey();
+    if(!sqKey) return;
     squadFetchState[m.cricapiId] = "loading";
     try{
-      var res = await fetch("https://api.cricapi.com/v1/match_squad?apikey=" + encodeURIComponent(activeCricketKey) + "&id=" + encodeURIComponent(m.cricapiId));
+      var res = await fetch("https://api.cricapi.com/v1/match_squad?apikey=" + encodeURIComponent(sqKey) + "&id=" + encodeURIComponent(m.cricapiId));
       var json = await res.json();
-      if(json.info) lastCricketInfo = json.info;
+      recordKeyInfo(sqKey, json.info);
       if(json.status !== "success" || !Array.isArray(json.data)){ squadFetchState[m.cricapiId] = "unavailable"; return; }
       var squads = {};
       json.data.forEach(function(team){
@@ -2891,13 +2938,23 @@
     var note = $("statusNote");
     if(!silent){ note.className = "status-note"; note.textContent = "Contacting cricketdata.org…"; }
     try{
-      var res = await fetch(CRICKET_PROXY_URL || ("https://api.cricapi.com/v1/currentMatches?apikey=" + encodeURIComponent(key) + "&offset=0"));
-      var json = await res.json();
-      if(json.info) lastCricketInfo = json.info;
-      if(json.status !== "success") throw new Error(json.message || json.reason || "API rejected the request");
+      var json = null, tried = [], lastErr = "no API key";
+      while(!json){
+        var useKey = CRICKET_PROXY_URL ? null : pickCricketKey(tried);
+        if(!CRICKET_PROXY_URL && !useKey) throw new Error(tried.length ? lastErr + (cricketKeys.length > 1 ? " — all " + cricketKeys.length + " keys are used up or failing" : "") : "all keys are used up for today");
+        var res = await fetch(CRICKET_PROXY_URL || ("https://api.cricapi.com/v1/currentMatches?apikey=" + encodeURIComponent(useKey) + "&offset=0"));
+        var body = await res.json();
+        recordKeyInfo(useKey, body.info);
+        if(body.status === "success"){ json = body; break; }
+        lastErr = body.message || body.reason || "API rejected the request";
+        if(!useKey) throw new Error(lastErr);
+        // quota used up or key rejected: park this key and try the next one straight away
+        markKeyExhausted(useKey);
+        tried.push(useKey);
+      }
       var live = (json.data || []).filter(function(m){ return m.matchStarted && !m.matchEnded; });
       var stamp = new Date().toLocaleTimeString();
-      var quota = json.info ? (json.info.hitsUsed + " of " + json.info.hitsLimit + " free hits used today") : "";
+      var quota = CRICKET_PROXY_URL ? "" : (totalHitsLeft() + " hits left today" + (cricketKeys.length > 1 ? " across " + cricketKeys.length + " keys" : ""));
       if(!live.length){
         cricketRealMatches = [];
         note.className = "status-note";
@@ -2928,7 +2985,7 @@
   }
 
   async function connectAndPoll(key, silent){
-    activeCricketKey = key;
+    cricketKeys = parseKeys(key);
     stopCricketPolling();
     var gen = cricketPollGen;
     var ok = await fetchCricketLive(key, {silent: silent});
@@ -2944,6 +3001,8 @@
       note.textContent = "Add a CricAPI key first — get a free one at cricketdata.org.";
       return;
     }
+    key = parseKeys(key).join("\n");
+    $("apiKeyInput").value = key;
     try { localStorage.setItem("floodlight_cricapi_key", key); } catch(e){}
     connectAndPoll(key, false);
   });
