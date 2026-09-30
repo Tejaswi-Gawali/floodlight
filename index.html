@@ -475,7 +475,15 @@
   .bcast-seg-row.stats{background:linear-gradient(90deg,#0a1f5c,#12308a 50%,#0a1f5c);border-color:rgba(120,160,255,0.3);}
   .bcast-seg-row.stats .bcast-seg{font-size:24px;font-weight:600;padding:6px 14px;}
   .bcast-seg-row.stats .bcast-seg b{display:inline-block;transform:skewX(-8deg);}
-  .bcast-seg.win-seg{flex:2;}
+  .bcast-seg.win-seg{flex:1.6;}
+  .bcast-seg-row.stats .bcast-seg.ctx{
+    flex:2;justify-content:flex-end;font-size:21px;color:#fff;letter-spacing:0.02em;
+    background:linear-gradient(90deg,transparent,rgba(140,10,24,0.55));
+  }
+  .bcast-seg-row.stats .bcast-seg.ctx:empty{display:none;}
+  .bcast-stadium.no-players{height:240px;}
+  .bcast-lastball.lb-word{font-size:54px;letter-spacing:0.04em;}
+  .bcast-lastball.lb-over{color:#e0303a;-webkit-text-stroke:2px #fff;paint-order:stroke fill;}
   .win-pills{display:flex;width:100%;border-radius:4px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,0.2);}
   .win-pill{
     flex:1 1 50%;min-width:max-content;padding:1px 12px;text-align:center;
@@ -837,6 +845,25 @@
     .commentary-body.update{animation:none;}
   }
 
+  .watermark-x{
+    position:fixed;top:0;left:0;z-index:65;pointer-events:none;
+    animation:wm-x 29s ease-in-out infinite alternate;
+  }
+  .watermark-y{animation:wm-y 17s ease-in-out infinite alternate;}
+  @keyframes wm-x{from{transform:translateX(3vw);}to{transform:translateX(calc(97vw - 100%));}}
+  @keyframes wm-y{from{transform:translateY(12vh);}to{transform:translateY(calc(82vh - 100%));}}
+  .watermark{
+    font-family:"Teko",sans-serif;font-size:clamp(22px,3.2vw,42px);font-weight:700;
+    letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;user-select:none;
+    color:rgba(255,255,255,0.17);text-shadow:0 0 2px rgba(0,0,0,0.25);
+    transform:rotate(-8deg);
+  }
+  .watermark:empty{display:none;}
+  @media (prefers-reduced-motion: reduce){
+    .watermark-x, .watermark-y{animation:none;}
+    .watermark-x{top:45vh;left:35vw;}
+  }
+
   body.has-ticker{padding-bottom:58px;}
   .bcast-ticker{
     position:fixed;left:0;right:0;bottom:0;z-index:60;
@@ -909,6 +936,7 @@
     .bcast-seg-row.stats{flex-wrap:wrap;}
     .bcast-seg-row.stats .bcast-seg{font-size:19px;}
     .bcast-seg.win-seg{flex-basis:100%;border-right:none;border-top:1px solid rgba(255,255,255,0.12);}
+    .bcast-seg-row.stats .bcast-seg.ctx{flex-basis:100%;justify-content:center;font-size:18px;border-top:1px solid rgba(255,255,255,0.12);}
     .bcast-over-history{flex-wrap:wrap;}
     .oh-recent{flex-basis:100%;justify-content:center;padding:4px 0;font-size:20px;}
     .bcast-stadium{height:auto;padding:200px 8px 8px;}
@@ -1096,14 +1124,14 @@
             <div class="win-pill b" id="bcWinBarB"><span id="bcWinCodeB">—</span> <b id="bcWinB">0%</b></div>
           </div>
         </div>
+        <div class="bcast-seg wide ctx" id="bcContextMsg"></div>
       </div>
 
-      <div class="bcast-seg-row navy">
+      <div class="bcast-seg-row navy" id="bcLastWktRow">
         <div class="bcast-seg">Last Wkt: <span id="bcLastWkt"></span></div>
-        <div class="bcast-seg wide" id="bcContextMsg"></div>
       </div>
 
-      <div class="bcast-over-history">
+      <div class="bcast-over-history" id="bcOverHistory">
         <div class="oh-recent">Recent</div>
         <div class="oh-seg">
           <span class="oh-label" id="ohPrevLabel">Over —</span>
@@ -1147,7 +1175,7 @@
         </div>
         <div class="replay-badge" id="replayBadge">Replay</div>
 
-        <div class="bcast-players-row">
+        <div class="bcast-players-row" id="bcPlayersRow">
           <div class="bcast-player-card bat" id="bcCard1">
             <div class="avatar" id="bcAvatar1"></div>
             <div class="pc-body">
@@ -1307,6 +1335,13 @@
 
   <hr class="divider">
 
+  <h3>Channel watermark</h3>
+  <p>Your channel name drifts slowly around the screen at low opacity, so recordings of your stream carry it. For OBS, add <b>?overlay=1&amp;channel=YOURNAME</b> to the page address instead.</p>
+  <label class="field-label" for="channelInput">Channel name</label>
+  <input class="field-input" id="channelInput" placeholder="e.g. FLOODLIGHT LIVE" maxlength="40" autocomplete="off">
+
+  <hr class="divider">
+
   <h3>Preview celebration</h3>
   <p>Fire the boundary/wicket celebration on demand — same effect that plays automatically when live data shows a four, six, or wicket.</p>
   <button class="btn" id="previewFourBtn" style="margin-bottom:8px;">Preview FOUR</button>
@@ -1320,6 +1355,8 @@
   <div class="code-line">?overlay=1</div>
   <p style="margin-bottom:0;">Or use the "Stream overlay" button in the top bar to preview it right here first.</p>
 </div>
+
+<div class="watermark-x" aria-hidden="true"><div class="watermark-y"><div class="watermark" id="watermark">FLOODLIGHT</div></div></div>
 
 <script>
 (function(){
@@ -1568,6 +1605,7 @@
   function updateCommentary(m, lastBall, strikerName){
     var body = $("bcCommentaryBody");
     if(!body) return;
+    $("bcCommentary").hidden = !(lastBall && lastBall !== "—");
     var key = m.id + ":" + (m._lastBallLabel || m.score.overs) + ":" + lastBall;
     if(key === lastCommentaryKey) return;
     lastCommentaryKey = key;
@@ -1846,7 +1884,7 @@
       el.innerHTML = "";
       var img = document.createElement("img");
       img.src = imgUrl; img.alt = code;
-      img.style.cssText = "width:100%;height:100%;object-fit:" + (imgUrl.indexOf("flagcdn.com") !== -1 ? "cover" : "contain") + ";";
+      img.style.cssText = "width:100%;height:100%;object-fit:" + (imgUrl.indexOf("flagcdn.com") !== -1 || imgUrl.indexOf("data:image/svg") === 0 ? "cover" : "contain") + ";";
       img.onerror = function(){ el.innerHTML = teamCrestSVG(code); };
       el.appendChild(img);
     } else {
@@ -1854,9 +1892,26 @@
     }
   }
 
+  // teams that play as a region, so they have no national flag
+  var REGION_BADGES = {
+    "west indies": {bg1:"#8e2344", bg2:"#5a1128", fg:"#f2c14e", text:"WI"}
+  };
+  function regionBadgeUrl(team){
+    var key = String(team||"").toLowerCase().replace(/\s*\b(women|men|u-?19|a)\b\s*$/i, "").trim();
+    var b = REGION_BADGES[key];
+    if(!b) return null;
+    var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 107'>" +
+      "<defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='" + b.bg1 + "'/><stop offset='1' stop-color='" + b.bg2 + "'/></linearGradient></defs>" +
+      "<rect width='160' height='107' fill='url(#g)'/>" +
+      "<text x='80' y='76' text-anchor='middle' font-family='Arial Black, Arial, sans-serif' font-weight='900' font-size='60' fill='" + b.fg + "'>" + b.text + "</text></svg>";
+    return "data:image/svg+xml," + encodeURIComponent(svg);
+  }
+
   function teamBadgeUrl(m, team){
+    var region = regionBadgeUrl(team);
+    if(region) return region;
     var info = teamInfoFor(m, team);
-    return countryFlagUrl(team) || (info && info.img) || null;
+    return countryFlagUrl(team) || (info && info.img ? info.img.replace(/([?&]w=)\d+/, "$1160") : null);
   }
 
   function renderInningsStrip(m, codeA, codeB){
@@ -1903,7 +1958,17 @@
     renderInningsStrip(m, codeA, codeB);
 
     var lastBall = m._lastBallValue || ((m.thisOver && m.thisOver.length) ? m.thisOver[m.thisOver.length-1] : "—");
-    pulseText($("bcLastBall"), lastBall);
+    var lbEl = $("bcLastBall");
+    if(lastBall === "—"){
+      // no ball-by-ball feed: show the broadcast idle states instead of a dash
+      var overDone = oversToBalls(m.score.overs) > 0 && oversToBalls(m.score.overs) % 6 === 0;
+      pulseText(lbEl, overDone ? "OVER" : "BALL");
+      lbEl.classList.add("lb-word");
+      lbEl.classList.toggle("lb-over", overDone);
+    } else {
+      lbEl.classList.remove("lb-word", "lb-over");
+      pulseText(lbEl, lastBall);
+    }
     updateCommentary(m, lastBall, m._lastFacedBatter || (m.batters[0] && m.batters[0].name));
     updateTicker(m);
 
@@ -1918,7 +1983,7 @@
 
     pulseText($("bcCrr"), (m.crr||0).toFixed(2));
     pulseText($("bcRrr"), m.rrr ? m.rrr.toFixed(2) : "—");
-    pulseText($("bcPship"), m.partnership ? (m.partnership.runs + "(" + m.partnership.balls + ")") : "0");
+    pulseText($("bcPship"), m.partnership ? (m.partnership.runs + "(" + m.partnership.balls + ")") : "—");
 
     var contextEl = $("bcContextMsg");
     if(m.target && m.ballsRemaining){
@@ -1937,6 +2002,11 @@
     $("bcPrevSum").textContent = prevSum;
 
     $("bcLastWkt").textContent = m.lastWicket ? (m.lastWicket.name + " " + m.lastWicket.runs + "(" + m.lastWicket.balls + ")") : "";
+    $("bcLastWktRow").hidden = !m.lastWicket;
+    $("bcOverHistory").hidden = !((m.thisOver && m.thisOver.length) || (m.prevOver && m.prevOver.length));
+    var hasPlayers = (m.batters || []).some(function(b){ return b && b.name && b.name !== "—"; }) || (m.bowler && m.bowler.name && m.bowler.name !== "—");
+    $("bcPlayersRow").hidden = !hasPlayers;
+    $("bcStadium").classList.toggle("no-players", !hasPlayers);
     var winBar = $("bcWinBar");
     if(m.winProb){
       $("bcWinA").textContent = m.winProb.batPct + "%";
@@ -1949,6 +2019,7 @@
       $("bcWinB").textContent = "—";
       winBar.hidden = true;
     }
+    winBar.parentNode.hidden = !m.winProb;
 
     var b0 = m.batters[0] || {name:"—",stat:"0(0)"}, b1 = m.batters[1] || {name:"—",stat:"0(0)"};
     var s0 = parseBatStat(b0.stat), s1 = parseBatStat(b1.stat);
@@ -2561,5 +2632,18 @@
   try{
     if(new URLSearchParams(window.location.search).get("overlay") === "1") applyOverlay(true);
   } catch(e){}
+
+  var DEFAULT_CHANNEL = "FLOODLIGHT";
+  var channelFromUrl = null, savedChannel = null;
+  try { channelFromUrl = new URLSearchParams(window.location.search).get("channel"); } catch(e){}
+  try { savedChannel = localStorage.getItem("floodlight_channel"); } catch(e){}
+  var channelName = (channelFromUrl || savedChannel || DEFAULT_CHANNEL).slice(0, 40);
+  $("watermark").textContent = channelName;
+  $("channelInput").value = (savedChannel || channelFromUrl || "");
+  $("channelInput").addEventListener("input", function(){
+    var v = this.value.trim().slice(0, 40);
+    $("watermark").textContent = v || DEFAULT_CHANNEL;
+    try { if(v) localStorage.setItem("floodlight_channel", v); else localStorage.removeItem("floodlight_channel"); } catch(e){}
+  });
 })();
 </script>
