@@ -1033,6 +1033,48 @@
     .interstitial.ix-in, .interstitial.ix-in .ix-panel{animation:none;}
   }
 
+  /* ---------- manual scorer window (?scorer=1) ---------- */
+  body.scorer-mode{padding-bottom:0 !important;}
+  body.scorer-mode #cricketView, body.scorer-mode #footballView, body.scorer-mode footer,
+  body.scorer-mode .sport-tabs, body.scorer-mode .topbar-actions, body.scorer-mode .bcast-ticker,
+  body.scorer-mode .watermark-x, body.scorer-mode .interstitial{display:none !important;}
+  body.scorer-mode .topbar{padding:12px 16px 4px;}
+  #scorerView{max-width:560px;margin:0 auto 24px;}
+  .sc-card{background:linear-gradient(160deg,#0a1a52,#140a3c);border:1px solid rgba(231,184,74,0.45);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .sc-head{display:flex;gap:12px;align-items:flex-start;}
+  .sc-head-main{flex:1;min-width:0;}
+  .sc-kicker{font-family:"Teko",sans-serif;font-size:16px;letter-spacing:0.14em;text-transform:uppercase;color:var(--six);}
+  .sc-match{margin:4px 0 2px;font-family:"Teko",sans-serif;font-size:20px;}
+  .sc-live{font-size:12.5px;color:var(--text-dim);}
+  .btn.sc-small{width:auto;flex:0 0 auto;margin-top:4px;padding:8px 10px;font-size:12px;}
+  .sc-note{font-size:12px;line-height:1.45;color:var(--text-faint);background:rgba(255,255,255,0.04);border-radius:9px;padding:8px 10px;}
+  .sc-section-title{font-family:"Teko",sans-serif;font-size:19px;letter-spacing:0.08em;text-transform:uppercase;color:#fff;display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;}
+  .sc-section-title span{font-family:"Work Sans",sans-serif;font-size:11px;letter-spacing:0;text-transform:none;color:var(--text-faint);}
+  .sc-row{display:flex;align-items:center;gap:8px;}
+  .sc-row .field-input{margin:0;flex:1;min-width:0;}
+  .sc-strike{width:34px;height:34px;flex-shrink:0;border-radius:50%;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.25);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .sc-strike.on{color:var(--six);border-color:var(--six);background:rgba(231,184,74,0.15);}
+  .sc-bowl-dot{cursor:default;color:#4d9ad9;border-color:rgba(77,154,217,0.5);}
+  .sc-fig{font-family:"Teko",sans-serif;font-size:22px;color:#fff;min-width:92px;text-align:right;white-space:nowrap;}
+  .sc-over{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border-radius:10px;background:rgba(46,18,112,0.55);}
+  .sc-over-label{font-family:"Teko",sans-serif;font-size:16px;text-transform:uppercase;color:rgba(255,255,255,0.7);flex-shrink:0;}
+  .sc-pad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:4px;}
+  .sc-ball{
+    height:64px;border-radius:12px;border:none;cursor:pointer;
+    font-family:"Teko",sans-serif;font-size:32px;font-weight:700;color:#fff;
+    background:linear-gradient(180deg,#5a2bc0,#34118a);box-shadow:inset 0 0 0 2px rgba(255,255,255,0.35);
+  }
+  .sc-ball:active{transform:scale(0.96);}
+  .sc-ball.four{background:linear-gradient(180deg,#ff8a2a,#d9531a);}
+  .sc-ball.six{background:linear-gradient(180deg,#ffd35a,#e0a414);color:#2a1a00;}
+  .sc-ball.wicket{background:linear-gradient(180deg,#f0424c,#b3141f);}
+  .sc-ball.extra{background:linear-gradient(180deg,#5cc84a,#2f8f22);font-size:26px;}
+  .sc-actions{display:flex;gap:8px;}
+  .sc-actions .btn{margin-top:0;}
+  .sc-keys{font-size:11.5px;color:var(--text-faint);text-align:center;}
+  .sc-flash{animation:sc-flash 0.6s ease-out;}
+  @keyframes sc-flash{0%{box-shadow:0 0 0 3px var(--six);}100%{box-shadow:0 0 0 0 rgba(231,184,74,0);}}
+
   body.has-ticker{padding-bottom:58px;}
   .bcast-ticker{
     position:fixed;left:0;right:0;bottom:0;z-index:60;
@@ -1266,6 +1308,7 @@
     </div>
     <div class="topbar-actions">
       <button class="icon-btn square" id="soundBtn" title="Toggle celebration sound" aria-label="Toggle celebration sound">🔇</button>
+      <button class="icon-btn" id="scorerBtn" title="Open the ball-by-ball scorer in its own window">Scorer</button>
       <button class="icon-btn" id="overlayBtn">Stream overlay</button>
       <button class="icon-btn square" id="settingsBtn" title="Data source settings" aria-label="Data source settings">⚙</button>
       <button class="icon-btn square" id="exitOverlayBtn" hidden title="Exit overlay preview" aria-label="Exit overlay preview">✕</button>
@@ -1484,6 +1527,48 @@
   </div>
 
   <!-- ================= FOOTBALL VIEW ================= -->
+  <div id="scorerView" hidden>
+    <div class="sc-card">
+      <div class="sc-head">
+        <div class="sc-head-main">
+          <div class="sc-kicker">Floodlight scorer</div>
+          <select class="field-input sc-match" id="scMatch" aria-label="Live match"></select>
+          <div class="sc-live" id="scLive">Looking for a live match…</div>
+        </div>
+        <button class="btn secondary sc-small" id="scReset">Reset innings</button>
+      </div>
+      <div class="sc-note" id="scNote">Keep the Floodlight scoreboard open in another tab or window of this browser (with your CricAPI key). Every tap here updates it instantly — the team total still comes from the live feed.</div>
+
+      <div class="sc-section-title">Batters <span>tap ● to choose who's on strike</span></div>
+      <div class="sc-row"><button class="sc-strike" data-i="0" aria-label="Batter 1 on strike">●</button><input class="field-input sc-name" id="scBat0" placeholder="Batter 1 name" list="scNames" autocomplete="off"><span class="sc-fig" id="scBatFig0">0 (0)</span></div>
+      <div class="sc-row"><button class="sc-strike" data-i="1" aria-label="Batter 2 on strike">●</button><input class="field-input sc-name" id="scBat1" placeholder="Batter 2 name" list="scNames" autocomplete="off"><span class="sc-fig" id="scBatFig1">0 (0)</span></div>
+
+      <div class="sc-section-title">Bowler <span id="scNextBall">next ball 0.1</span></div>
+      <div class="sc-row"><span class="sc-strike sc-bowl-dot">●</span><input class="field-input sc-name" id="scBowler" placeholder="Bowler name" list="scNames" autocomplete="off"><span class="sc-fig" id="scBowlFig">0.0-0-0-0</span></div>
+      <datalist id="scNames"></datalist>
+
+      <div class="sc-over"><span class="sc-over-label">This over</span><div class="oh-balls" id="scThisOver"></div></div>
+
+      <div class="sc-pad">
+        <button class="sc-ball" data-ball=".">0</button>
+        <button class="sc-ball" data-ball="1">1</button>
+        <button class="sc-ball" data-ball="2">2</button>
+        <button class="sc-ball" data-ball="3">3</button>
+        <button class="sc-ball four" data-ball="4">4</button>
+        <button class="sc-ball six" data-ball="6">6</button>
+        <button class="sc-ball wicket" data-ball="W">W</button>
+        <button class="sc-ball extra" data-ball="wd">wd</button>
+        <button class="sc-ball extra" data-ball="nb">nb</button>
+        <button class="sc-ball extra" data-ball="lb">lb</button>
+      </div>
+      <div class="sc-actions">
+        <button class="btn secondary" id="scSwap">⇄ Swap strike</button>
+        <button class="btn secondary" id="scUndo">↶ Undo last ball</button>
+      </div>
+      <div class="sc-keys">Keys: <b>0–4, 6</b> runs · <b>W</b> wicket · <b>E</b> wide · <b>N</b> no-ball · <b>L</b> leg-bye · <b>S</b> swap strike · <b>U</b> undo</div>
+    </div>
+  </div>
+
   <div id="footballView" hidden>
     <div class="rail-head">
       <span class="rail-label">Live right now · Football</span>
@@ -1626,6 +1711,8 @@
 <script>
 (function(){
   "use strict";
+  var SCORER_MODE = false;
+  try { SCORER_MODE = new URLSearchParams(window.location.search).get("scorer") === "1"; } catch(e){}
 
   /* ============ CRICKET DEMO DATA ============ */
   var MATCHES = [
@@ -1804,7 +1891,10 @@
     return (words[0]||"—").slice(0,3).toUpperCase();
   }
 
-  function runVal(v){ return (v==="W"||v===".") ? 0 : parseInt(v,10) || 0; }
+  function runVal(v){
+    if(v === "wd" || v === "nb" || v === "lb") return 1;
+    return (v==="W"||v===".") ? 0 : parseInt(v,10) || 0;
+  }
 
   function pulseText(el, newText){
     newText = String(newText);
@@ -1841,11 +1931,14 @@
     one: ["Quick single taken.", "Pushed to mid-on for one.", "Easy single, good running.", "Worked away for a single."],
     two: ["Good running between the wickets, two runs.", "Driven into the gap for a couple.", "Two runs, smart placement."],
     three: ["Excellent running, they get three there.", "Placed well into the deep, three runs."],
+    wide: ["Wide called, that drifted too far down the leg side.", "Wide! Poor line there, an extra run."],
+    noball: ["No ball! Overstepped, an extra run.", "No ball called, a free hit on the way."],
+    legbye: ["Off the pads, they scamper a leg bye.", "Leg bye taken, the batter was beaten."],
     four: ["FOUR! Cracking shot through the covers!", "FOUR! Finds the gap perfectly!", "FOUR! Timed to perfection!", "FOUR! Races away to the boundary!"],
     six: ["SIX! Absolutely smashed over long-on!", "SIX! That's gone miles into the stands!", "SIX! Magnificent hit, maximum!", "SIX! Pure power from the middle of the bat!"],
     wicket: ["OUT! Big wicket, the crowd erupts!", "OUT! Great take, huge breakthrough!", "OUT! That's a massive moment in this match!"]
   };
-  var BALL_KEY_MAP = {"W":"wicket","4":"four","6":"six",".":"dot","1":"one","2":"two","3":"three"};
+  var BALL_KEY_MAP = {"W":"wicket","4":"four","6":"six",".":"dot","1":"one","2":"two","3":"three","wd":"wide","nb":"noball","lb":"legbye"};
 
   function pickCommentary(ballValue, seed){
     var key = BALL_KEY_MAP[ballValue] || "dot";
@@ -1858,6 +1951,9 @@
     "6":{cls:"hl-six", text:function(){return "🚀 SIX!";}},
     "4":{cls:"hl-four", text:function(){return "🏏 FOUR!";}},
     ".":{cls:"hl-dot", text:function(){return "DOT BALL";}},
+    "wd":{cls:"hl-run", text:function(){return "WIDE";}},
+    "nb":{cls:"hl-run", text:function(){return "NO BALL";}},
+    "lb":{cls:"hl-run", text:function(){return "LEG BYE";}},
     "1":{cls:"hl-run", text:function(){return "1 RUN";}},
     "2":{cls:"hl-run", text:function(){return "2 RUNS";}},
     "3":{cls:"hl-run", text:function(){return "3 RUNS";}}
@@ -2269,7 +2365,7 @@
       contextEl.textContent = m.sub || "";
     }
 
-    var thisOverNum = m.score.overs ? Math.floor(parseFloat(m.score.overs)) + 1 : null;
+    var thisOverNum = m._manualOverNo != null ? m._manualOverNo + 1 : (m.score.overs ? Math.floor(parseFloat(m.score.overs)) + 1 : null);
     $("ohPrevLabel").textContent = thisOverNum ? ("Over " + (thisOverNum-1)) : "Prev over";
     $("ohThisLabel").textContent = thisOverNum ? ("Over " + thisOverNum) : "This over";
     var thisSum = renderBallGroup($("bcThisOver"), m.thisOver, true);
@@ -2715,9 +2811,11 @@
 
   document.body.classList.toggle("has-ticker", activeSport === "cricket");
   renderCricket();
-  startDemoSimulator();
-  fetchFootball();
-  setInterval(fetchFootball, 45000);
+  if(!SCORER_MODE){
+    startDemoSimulator();
+    fetchFootball();
+    setInterval(fetchFootball, 45000);
+  }
 
   /* ---------------- settings drawer ---------------- */
   var backdrop = $("drawerBackdrop"), drawer = $("drawer");
@@ -3013,10 +3111,12 @@
           lastGoodCricket[nm.id] = {count:cur.count, overs:cur.overs, runs:cur.runs, match:nm};
           return nm;
         });
+        cricketRealMatches.forEach(applyManualScoring);
         if(!silent || !cricketRealMatches.some(function(m){return m.id===activeId;})) activeId = cricketRealMatches[0].id;
         note.className = "status-note ok";
         note.textContent = live.length + " live match(es) · updated " + stamp + " · " + quota;
       }
+      publishLiveInfo();
       if(activeSport==="cricket") renderCricket();
       return true;
     } catch(err){
@@ -3049,7 +3149,8 @@
     connectAndPoll(key, false);
   });
 
-  if(CRICKET_PROXY_URL){ connectAndPoll(null, true); }
+  if(SCORER_MODE){ /* the scorer window reads the scoreboard tab's data instead of calling CricAPI */ }
+  else if(CRICKET_PROXY_URL){ connectAndPoll(null, true); }
   else if(savedKey){ connectAndPoll(savedKey, true); }
 
   /* ---------------- OBS overlay mode ---------------- */
@@ -3405,7 +3506,7 @@
   $("breakTeamsBtn").addEventListener("click", function(){ manualBreak("squads", "The team sheet"); });
   $("breakSummaryBtn").addEventListener("click", function(){ manualBreak("summary", "The summary"); });
   document.addEventListener("keydown", function(e){
-    if(e.ctrlKey || e.metaKey || e.altKey) return;
+    if(SCORER_MODE || e.ctrlKey || e.metaKey || e.altKey) return;
     var tag = (e.target && e.target.tagName) || "";
     if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
     var k = (e.key || "").toLowerCase();
@@ -3414,6 +3515,266 @@
     else if(k === "t") showBreak("squads");
     else if(k === "m") showBreak("summary");
   });
-  scheduleBreak(Math.min(45000, breakEveryMin * 60000));
+  if(!SCORER_MODE) scheduleBreak(Math.min(45000, breakEveryMin * 60000));
+
+  /* ---------------- manual scorer: a separate window taps in each ball, synced through localStorage ---------------- */
+  function scorerKey(matchId, team){
+    return "floodlight_scorer_" + matchId + "_" + String(team || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  }
+  function loadScorer(matchId, team){
+    try { var raw = localStorage.getItem(scorerKey(matchId, team)); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
+  }
+
+  // put the scorer's batters, bowler and balls onto a live match (the team total stays from CricAPI)
+  function applyManualScoring(m){
+    if(!m || m.isDemo || !m.cricapiId) return m;
+    var st = loadScorer(m.cricapiId, m.battingNow);
+    if(!st || !st.batters) return m;
+    var named = st.batters.some(function(b){ return b.name; }) || st.bowler;
+    if(!named && !st.thisOver.length && !st.prevOver.length) return m;
+    m.batters = st.batters.map(function(b, i){
+      return {name: b.name || "—", stat: b.runs + " (" + b.balls + ")", strike: i === st.striker,
+        fours: b.fours, six: b.six, sr: b.balls ? +(b.runs * 100 / b.balls).toFixed(1) : 0};
+    });
+    var fig = (st.bowler && st.bowlers[st.bowler]) || {balls:0, runs:0, wkts:0};
+    m.bowler = {name: st.bowler || "—", stat: formatBowlerFigures(fig), econ: fig.balls ? +(fig.runs * 6 / fig.balls).toFixed(2) : 0};
+    m.thisOver = st.thisOver.slice();
+    m.prevOver = st.prevOver.slice();
+    m.partnership = st.pship;
+    m.lastWicket = st.lastWicket;
+    m._manualOverNo = st.overNo;
+    if(st.last){
+      m._lastBallValue = st.last.value;
+      m._lastBallLabel = st.last.label;
+      m._lastFacedBatter = st.last.batter;
+      m._lastBowler = st.last.bowler;
+    }
+    return m;
+  }
+
+  function squadNames(m){
+    var out = [];
+    if(m.squads) Object.keys(m.squads).forEach(function(t){ (m.squads[t] || []).forEach(function(p){ if(p.name) out.push(p.name); }); });
+    return out;
+  }
+
+  // the scoreboard tab tells the scorer window which live matches exist (so the scorer never calls CricAPI)
+  function publishLiveInfo(){
+    try{
+      localStorage.setItem("floodlight_live_info", JSON.stringify({at: Date.now(), matches: cricketRealMatches.map(function(m){
+        return {id: m.cricapiId, title: m.teamA + " vs " + m.teamB, batting: m.battingNow, bowling: otherTeam(m, m.battingNow),
+          score: m.score.runs + "/" + m.score.wkts, overs: m.score.overs, names: squadNames(m)};
+      })}));
+    } catch(e){}
+  }
+
+  $("scorerBtn").addEventListener("click", function(){
+    window.open(window.location.pathname + "?scorer=1", "floodlightScorer", "width=580,height=900");
+  });
+
+  if(!SCORER_MODE){
+    window.addEventListener("storage", function(e){
+      if(!e.key || e.key.indexOf("floodlight_scorer_") !== 0) return;
+      cricketRealMatches.forEach(applyManualScoring);
+      if(activeSport === "cricket") renderCricket();
+    });
+  }
+
+  if(SCORER_MODE){
+    document.body.classList.add("scorer-mode");
+    document.body.classList.remove("has-ticker");
+    $("scorerView").hidden = false;
+    document.title = "Floodlight scorer";
+
+    var scMatchId = null, scTeam = null, scState = null, scHistory = [];
+
+    function readLiveInfo(){ try { return JSON.parse(localStorage.getItem("floodlight_live_info") || "null"); } catch(e){ return null; } }
+    function freshBatter(){ return {name:"", runs:0, balls:0, fours:0, six:0}; }
+    function newInnings(match){
+      var ob = oversToBalls(match.overs);
+      return {batters:[freshBatter(), freshBatter()], striker:0, bowler:"", bowlers:{}, overNo:Math.floor(ob / 6), ballNo:ob % 6,
+        thisOver:[], prevOver:[], pship:{runs:0, balls:0}, lastWicket:null, last:null};
+    }
+    function saveScorer(){
+      if(!scState) return;
+      try { localStorage.setItem(scorerKey(scMatchId, scTeam), JSON.stringify(scState)); } catch(e){}
+    }
+    function selectedMatch(){
+      var info = readLiveInfo();
+      var list = (info && info.matches) || [];
+      return {list: list, match: list.filter(function(x){ return x.id === scMatchId; })[0] || list[0] || null};
+    }
+
+    function syncMatch(){
+      var sel = selectedMatch();
+      $("scMatch").innerHTML = sel.list.map(function(x){ return '<option value="' + esc(x.id) + '">' + esc(x.title) + '</option>'; }).join("") ||
+        '<option value="">No live match yet</option>';
+      if(!sel.match){
+        $("scLive").textContent = "No live match found. Open Floodlight in another tab of this browser with your CricAPI key.";
+        scState = null;
+        renderScorer();
+        return;
+      }
+      $("scMatch").value = sel.match.id;
+      $("scLive").textContent = sel.match.batting + " batting · " + sel.match.score + " (" + sel.match.overs + " ov) from the live feed";
+      if(scMatchId !== sel.match.id || scTeam !== sel.match.batting){
+        // a new match or a new innings: pick up saved progress, or start fresh from the live overs
+        scMatchId = sel.match.id;
+        scTeam = sel.match.batting;
+        scHistory = [];
+        scState = loadScorer(scMatchId, scTeam) || newInnings(sel.match);
+      }
+      $("scNames").innerHTML = (sel.match.names || []).map(function(n){ return '<option value="' + esc(n) + '">'; }).join("");
+      renderScorer();
+    }
+
+    function setField(id, value){
+      var el = $(id);
+      if(document.activeElement !== el) el.value = value;
+    }
+
+    function renderScorer(){
+      var on = !!scState;
+      Array.prototype.forEach.call(document.querySelectorAll(".sc-ball, #scSwap, #scUndo, #scReset, .sc-name"), function(el){ el.disabled = !on; });
+      if(!on) return;
+      scState.batters.forEach(function(b, i){
+        setField("scBat" + i, b.name);
+        $("scBatFig" + i).textContent = b.runs + " (" + b.balls + ")";
+      });
+      Array.prototype.forEach.call(document.querySelectorAll(".sc-strike[data-i]"), function(el){
+        el.classList.toggle("on", +el.getAttribute("data-i") === scState.striker);
+      });
+      setField("scBowler", scState.bowler);
+      var fig = scState.bowlers[scState.bowler] || {balls:0, runs:0, wkts:0};
+      $("scBowlFig").textContent = formatBowlerFigures(fig);
+      $("scNextBall").textContent = "next ball " + scState.overNo + "." + (scState.ballNo + 1);
+      renderBallGroup($("scThisOver"), scState.thisOver, true);
+      $("scUndo").disabled = !scHistory.length;
+    }
+
+    function flash(el){ el.classList.remove("sc-flash"); void el.offsetWidth; el.classList.add("sc-flash"); el.focus(); el.select(); }
+
+    function recordBall(v){
+      if(!scState) return;
+      scHistory.push(JSON.stringify(scState));
+      if(scHistory.length > 60) scHistory.shift();
+      var st = scState;
+      var legal = v !== "wd" && v !== "nb";
+      var batRuns = {".":0, "1":1, "2":2, "3":3, "4":4, "6":6, "W":0, "wd":0, "nb":0, "lb":0}[v];
+      var extra = (v === "wd" || v === "nb" || v === "lb") ? 1 : 0;
+      var striker = st.batters[st.striker];
+      var bowlerName = st.bowler;
+      // extras are labelled with the ball that has to be re-bowled, like broadcast commentary
+      var label = st.overNo + "." + (st.ballNo + 1);
+
+      if(v !== "wd"){ striker.balls += 1; striker.runs += batRuns; }
+      if(v === "4") striker.fours += 1;
+      if(v === "6") striker.six += 1;
+      if(bowlerName){
+        var fig = st.bowlers[bowlerName] || (st.bowlers[bowlerName] = {balls:0, runs:0, wkts:0});
+        if(legal) fig.balls += 1;
+        fig.runs += batRuns + (v === "wd" || v === "nb" ? 1 : 0);
+        if(v === "W") fig.wkts += 1;
+      }
+      st.pship.runs += batRuns + extra;
+      if(legal) st.pship.balls += 1;
+      st.thisOver.push(v);
+      st.last = {value:v, label:label, batter:striker.name || "—", bowler:bowlerName || "—"};
+
+      var needBatter = false, needBowler = false, outIdx = st.striker;
+      if(v === "W"){
+        st.lastWicket = {name: striker.name || "—", runs: striker.runs, balls: striker.balls};
+        st.batters[st.striker] = freshBatter();
+        st.pship = {runs:0, balls:0};
+        needBatter = true;
+      }
+      if(batRuns % 2 === 1 || v === "lb") st.striker = 1 - st.striker;
+      if(legal){
+        st.ballNo += 1;
+        if(st.ballNo >= 6){
+          st.prevOver = st.thisOver;
+          st.thisOver = [];
+          st.overNo += 1;
+          st.ballNo = 0;
+          st.striker = 1 - st.striker;
+          needBowler = true;
+        }
+      }
+      saveScorer();
+      renderScorer();
+      // prompt for the incoming batter first; a new bowler after that
+      if(needBatter) flash($("scBat" + outIdx));
+      else if(needBowler) flash($("scBowler"));
+    }
+
+    function undoBall(){
+      if(!scHistory.length) return;
+      scState = JSON.parse(scHistory.pop());
+      saveScorer();
+      renderScorer();
+    }
+    function swapStrike(){
+      if(!scState) return;
+      scState.striker = 1 - scState.striker;
+      saveScorer();
+      renderScorer();
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll(".sc-ball"), function(btn){
+      btn.addEventListener("click", function(){ recordBall(btn.getAttribute("data-ball")); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".sc-strike[data-i]"), function(btn){
+      btn.addEventListener("click", function(){
+        if(!scState) return;
+        scState.striker = +btn.getAttribute("data-i");
+        saveScorer();
+        renderScorer();
+      });
+    });
+    [0, 1].forEach(function(i){
+      $("scBat" + i).addEventListener("input", function(){
+        if(!scState) return;
+        scState.batters[i].name = this.value.trim();
+        saveScorer();
+      });
+    });
+    $("scBowler").addEventListener("input", function(){
+      if(!scState) return;
+      var name = this.value.trim();
+      scState.bowler = name;
+      if(name && !scState.bowlers[name]) scState.bowlers[name] = {balls:0, runs:0, wkts:0};
+      saveScorer();
+      $("scBowlFig").textContent = formatBowlerFigures(scState.bowlers[name] || {balls:0, runs:0, wkts:0});
+    });
+    $("scSwap").addEventListener("click", swapStrike);
+    $("scUndo").addEventListener("click", undoBall);
+    $("scReset").addEventListener("click", function(){
+      var sel = selectedMatch();
+      if(!sel.match || !window.confirm("Clear all batters, bowlers and balls for " + scTeam + "'s innings?")) return;
+      scHistory = [];
+      scState = newInnings(sel.match);
+      saveScorer();
+      renderScorer();
+    });
+    $("scMatch").addEventListener("change", function(){ scMatchId = this.value; scTeam = null; syncMatch(); });
+    // Enter in a name box jumps back to the ball buttons
+    Array.prototype.forEach.call(document.querySelectorAll(".sc-name"), function(el){
+      el.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); el.blur(); } });
+    });
+
+    var SC_KEYS = {"0":".", "1":"1", "2":"2", "3":"3", "4":"4", "6":"6", "w":"W", "e":"wd", "n":"nb", "l":"lb"};
+    document.addEventListener("keydown", function(e){
+      if(e.ctrlKey || e.metaKey || e.altKey) return;
+      var tag = (e.target && e.target.tagName) || "";
+      if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      var k = (e.key || "").toLowerCase();
+      if(SC_KEYS[k]){ e.preventDefault(); recordBall(SC_KEYS[k]); }
+      else if(k === "s"){ e.preventDefault(); swapStrike(); }
+      else if(k === "u"){ e.preventDefault(); undoBall(); }
+    });
+
+    window.addEventListener("storage", function(e){ if(e.key === "floodlight_live_info") syncMatch(); });
+    syncMatch();
+  }
 })();
 </script>
