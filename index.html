@@ -838,6 +838,7 @@
     text-transform:uppercase;letter-spacing:0.03em;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
+  .bcast-player-card .pc-name.long{font-size:23px;letter-spacing:0.01em;}
   .avatar{
     border-radius:50%;overflow:hidden;flex-shrink:0;
     background:radial-gradient(circle at 35% 30%,#e8c99a,#a9784a);
@@ -1141,6 +1142,7 @@
     .bcast-lastball{font-size:56px;min-height:80px;}
     .bcast-player-card .avatar{width:88px;}
     .bcast-player-card .pc-name{font-size:22px;}
+    .bcast-player-card .pc-name.long{font-size:18px;}
     .bcast-player-card .pscore{font-size:40px;}
     .bcast-player-card .role-tag{font-size:18px;}
   }
@@ -1649,6 +1651,11 @@
   <button class="btn" id="goLiveBtn">Fetch live cricket match</button>
   <button class="btn secondary" id="demoBtn">Stay in demo mode</button>
   <div class="status-note" id="statusNote">No key saved yet — running on demo data.</div>
+  <label class="field-label" for="cbKeyInput" style="margin-top:16px;">Cricbuzz key via RapidAPI (optional)</label>
+  <p style="margin-top:-4px;">Adds the live batters, bowler, recent balls, real commentary and win % automatically. Free plan: 100 requests/day (about 1h40m at one per minute) — several keys can be pasted, one per line.</p>
+  <textarea class="field-input key-input" id="cbKeyInput" rows="2" placeholder="X-RapidAPI-Key for cricbuzz-cricket2" autocomplete="off" spellcheck="false"></textarea>
+  <button class="btn secondary" id="cbSaveBtn">Save Cricbuzz key</button>
+  <div class="status-note" id="cbNote">No Cricbuzz key — player cards come from the Scorer.</div>
 
   <hr class="divider">
 
@@ -1849,7 +1856,7 @@
     if(v==="4") return "four";
     if(v==="6") return "six";
     if(v===".") return "dot";
-    if(/wd|nb/i.test(v)) return "extra";
+    if(/(wd|nb|lb|b)$/i.test(v)) return "extra";
     return "";
   }
 
@@ -1892,8 +1899,20 @@
   }
 
   function runVal(v){
-    if(v === "wd" || v === "nb" || v === "lb") return 1;
+    var ex = String(v).match(/^(\d*)(wd|nb|lb|b)$/i);
+    if(ex){
+      var n = parseInt(ex[1] || "0", 10), kind = ex[2].toLowerCase();
+      return (kind === "wd" || kind === "nb") ? 1 + n : (n || 1);
+    }
     return (v==="W"||v===".") ? 0 : parseInt(v,10) || 0;
+  }
+  // "4nb" -> "nb", "2b" -> "lb"… so extras get the right headline and commentary
+  function ballKind(v){
+    v = String(v);
+    if(BALL_HEADLINE[v]) return v;
+    var ex = v.match(/(wd|nb|lb|b)$/i);
+    if(ex){ var k = ex[1].toLowerCase(); return k === "b" ? "lb" : k; }
+    return ".";
   }
 
   function pulseText(el, newText){
@@ -1971,10 +1990,10 @@
     var hasBall = lastBall && lastBall !== "—";
     var overLabel = m._lastBallLabel || m.score.overs;
     var meta = hasBall ? (overLabel + "  " + esc(m._lastBowler || m.bowler.name) + " to " + esc(strikerName || "—")) : "—";
-    var hl = BALL_HEADLINE[lastBall] || BALL_HEADLINE["."];
+    var hl = BALL_HEADLINE[ballKind(lastBall)];
     var headline = hasBall ? hl.text() : "Match in progress…";
     var headlineCls = hasBall ? hl.cls : "";
-    var desc = hasBall ? pickCommentary(lastBall, key) : "";
+    var desc = hasBall ? (m._commText || pickCommentary(ballKind(lastBall), key)) : "";
 
     body.innerHTML =
       '<div class="cm-meta">' + meta + '</div>' +
@@ -2373,8 +2392,8 @@
     var prevSum = renderBallGroup($("bcPrevOver"), m.prevOver);
     $("bcPrevSum").textContent = prevSum;
 
-    $("bcLastWkt").textContent = m.lastWicket ? (m.lastWicket.name + " " + m.lastWicket.runs + "(" + m.lastWicket.balls + ")") : "";
-    $("bcLastWktRow").hidden = !m.lastWicket;
+    $("bcLastWkt").textContent = m.lastWicketText || (m.lastWicket ? (m.lastWicket.name + " " + m.lastWicket.runs + "(" + m.lastWicket.balls + ")") : "");
+    $("bcLastWktRow").hidden = !(m.lastWicket || m.lastWicketText);
     $("bcOverHistory").hidden = !((m.thisOver && m.thisOver.length) || (m.prevOver && m.prevOver.length));
     var hasPlayers = (m.batters || []).some(function(b){ return b && b.name && b.name !== "—"; }) || (m.bowler && m.bowler.name && m.bowler.name !== "—");
     $("bcPlayersRow").hidden = !hasPlayers;
@@ -2398,6 +2417,7 @@
     $("bcAvatar1").innerHTML = playerAvatarSVG(b0.name, "bat");
     markIfNewPlayer("bcCard1", b0.name);
     $("bcName1").textContent = b0.name + (b0.strike ? " *" : "");
+    $("bcName1").classList.toggle("long", b0.name.length > 12);
     $("bcCard1").classList.toggle("on-strike", !!b0.strike);
     $("bcScore1").textContent = s0.runs;
     $("bcBalls1").textContent = "(" + s0.balls + ")";
@@ -2408,6 +2428,7 @@
     $("bcAvatar2").innerHTML = playerAvatarSVG(b1.name, "bat");
     markIfNewPlayer("bcCard2", b1.name);
     $("bcName2").textContent = b1.name + (b1.strike ? " *" : "");
+    $("bcName2").classList.toggle("long", b1.name.length > 12);
     $("bcCard2").classList.toggle("on-strike", !!b1.strike);
     $("bcScore2").textContent = s1.runs;
     $("bcBalls2").textContent = "(" + s1.balls + ")";
@@ -2420,6 +2441,7 @@
     $("bcAvatar3").innerHTML = playerAvatarSVG(bw.name, "bowl");
     markIfNewPlayer("bcCard3", bw.name);
     $("bcName3").textContent = bw.name;
+    $("bcName3").classList.toggle("long", bw.name.length > 12);
     $("bcScore3").textContent = sw.score;
     $("bcBalls3").textContent = "(" + sw.overs + ")";
     $("bcEcon3").textContent = bw.econ!=null ? bw.econ : "0.00";
@@ -3111,8 +3133,9 @@
           lastGoodCricket[nm.id] = {count:cur.count, overs:cur.overs, runs:cur.runs, match:nm};
           return nm;
         });
-        cricketRealMatches.forEach(applyManualScoring);
+        cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); });
         if(!silent || !cricketRealMatches.some(function(m){return m.id===activeId;})) activeId = cricketRealMatches[0].id;
+        cbKickIfMissing();
         note.className = "status-note ok";
         note.textContent = live.length + " live match(es) · updated " + stamp + " · " + quota;
       }
@@ -3145,6 +3168,7 @@
     }
     key = parseKeys(key).join("\n");
     $("apiKeyInput").value = key;
+    keyQuota = {}; // pressing Fetch retries every key straight away, even ones parked earlier
     try { localStorage.setItem("floodlight_cricapi_key", key); } catch(e){}
     connectAndPoll(key, false);
   });
@@ -3527,7 +3551,7 @@
 
   // put the scorer's batters, bowler and balls onto a live match (the team total stays from CricAPI)
   function applyManualScoring(m){
-    if(!m || m.isDemo || !m.cricapiId) return m;
+    if(!m || m.isDemo || !m.cricapiId || m._autoPlayers) return m;
     var st = loadScorer(m.cricapiId, m.battingNow);
     if(!st || !st.batters) return m;
     var named = st.batters.some(function(b){ return b.name; }) || st.bowler;
@@ -3776,5 +3800,265 @@
     window.addEventListener("storage", function(e){ if(e.key === "floodlight_live_info") syncMatch(); });
     syncMatch();
   }
+
+  /* ---------------- Cricbuzz (RapidAPI): live batters, bowler, balls, commentary, win % ---------------- */
+  var CB_HOST = "cricbuzz-cricket2.p.rapidapi.com";
+  var CB_POLL_MS = 60000;
+  var CB_LIST_EVERY_MS = 10 * 60000;   // look up Cricbuzz's id for a new live match at most every 10 min
+  var CB_STALE_MS = 5 * 60000;         // older player data than this isn't shown
+  var cbKeys = [], cbQuota = {}, cbIdFor = {}, cbData = {}, cbSlots = {};
+  var cbLiveListAt = 0, cbTimer = null, cbStatus = "";
+
+  function cbKeyLeft(k){
+    var q = cbQuota[k];
+    if(!q) return 100;
+    if(q.retryAt) return Date.now() >= q.retryAt ? 1 : 0;
+    return q.left;
+  }
+  function pickCbKey(exclude){
+    var best = null, bestLeft = 0;
+    cbKeys.forEach(function(k){
+      if(exclude.indexOf(k) !== -1) return;
+      var left = cbKeyLeft(k);
+      if(left > bestLeft){ best = k; bestLeft = left; }
+    });
+    return best;
+  }
+  function cbRequestsLeft(){ return cbKeys.reduce(function(sum, k){ return sum + cbKeyLeft(k); }, 0); }
+
+  async function cbFetch(path){
+    var tried = [];
+    for(;;){
+      var k = pickCbKey(tried);
+      if(!k) throw new Error(cbKeys.length ? "no requests left today" : "no key");
+      var res = await fetch("https://" + CB_HOST + path, {headers: {"x-rapidapi-key": k, "x-rapidapi-host": CB_HOST}});
+      var left = res.headers.get("x-ratelimit-requests-remaining");
+      if(res.status === 429 || res.status === 401 || res.status === 403){
+        // over quota or key rejected: park it for an hour and try the next key
+        cbQuota[k] = {left: 0, retryAt: Date.now() + 3600000};
+        tried.push(k);
+        continue;
+      }
+      if(left !== null) cbQuota[k] = {left: +left};
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }
+  }
+
+  function cbTeamKey(name){ return String(name || "").toLowerCase().replace(/[^a-z]/g, ""); }
+  function cbSameTeams(a1, a2, b1, b2){
+    var x = [cbTeamKey(a1), cbTeamKey(a2)].sort().join("|"), y = [cbTeamKey(b1), cbTeamKey(b2)].sort().join("|");
+    return x === y;
+  }
+
+  async function cbRefreshLiveList(){
+    cbLiveListAt = Date.now();
+    var j = await cbFetch("/matches/v1/live");
+    var list = [];
+    (j.typeMatches || []).forEach(function(t){
+      (t.seriesMatches || []).forEach(function(sm){
+        var w = sm.seriesAdWrapper;
+        ((w && w.matches) || []).forEach(function(x){ if(x.matchInfo) list.push(x.matchInfo); });
+      });
+    });
+    cricketRealMatches.forEach(function(m){
+      var hit = list.filter(function(i){ return i.team1 && i.team2 && cbSameTeams(i.team1.teamName, i.team2.teamName, m.teamA, m.teamB); });
+      // several matches between the same sides (e.g. A-team games): prefer the one in progress
+      hit.sort(function(a, b){ return (b.state === "In Progress") - (a.state === "In Progress"); });
+      if(hit[0]) cbIdFor[m.cricapiId] = hit[0].matchId;
+    });
+  }
+
+  // Cricbuzz over strings look like "0 1 4 W Wd N4 L1 B2"
+  function cbBall(t){
+    if(/^\d+$/.test(t)) return t === "0" ? "." : t;
+    if(/^W$/i.test(t)) return "W";
+    var ex = t.match(/^(wd|n|nb|l|lb|b)(\d*)$/i);
+    if(ex){
+      var kind = ex[1].toLowerCase(), n = ex[2];
+      kind = kind === "n" ? "nb" : kind === "l" ? "lb" : kind;
+      if(kind === "wd" || kind === "nb") return (n && n !== "0" ? n : "") + kind;
+      return (n || "1") + kind;
+    }
+    return t.toLowerCase();
+  }
+  function cbTokens(str){ return String(str || "").trim().split(/\s+/).filter(Boolean).map(cbBall); }
+  // recent overs come as "... | 0 1 0 1 0 N4 0 | 1 0 6 0 0 1" — oldest first, the last group is the latest over
+  function cbOverGroups(str){
+    return String(str || "").split("|").map(function(g){ return g.replace(/\.\.\./g, "").trim(); }).filter(Boolean).map(cbTokens);
+  }
+  function cbClean(txt){ return String(txt || "").replace(/[A-Z]\d+\$/g, "").replace(/\s+/g, " ").trim(); }
+  // commentary marks bold words with placeholders ("B0$" -> "no ball"); put the words back
+  function cbExpand(c){
+    var txt = String(c.commtxt || "");
+    (c.commentaryformats || []).forEach(function(f){
+      (f.value || []).forEach(function(v){ if(v && v.id) txt = txt.split(v.id).join(v.value || ""); });
+    });
+    return cbClean(txt);
+  }
+
+  function parseCricbuzzComm(j){
+    var ms = j && j.miniscore;
+    if(!ms) return null;
+    var inns = (ms.inningsscores && ms.inningsscores.inningsscore) || [];
+    var cur = inns.filter(function(x){ return x.inningsid === ms.inningsid; })[0] || inns[0] || null;
+    var legal = cur ? (cur.balls != null ? cur.balls : oversToBalls(cur.overs)) : 0;
+    var done = Math.floor(legal / 6), inOver = legal % 6;
+    var groups = cbOverGroups(ms.curovsstats);
+    var nowTokens = groups.length ? groups[groups.length - 1] : [];
+    var beforeTokens = groups.length > 1 ? groups[groups.length - 2] : null;
+    var comms = (j.comwrapper || []).map(function(c){ return c.commentary; }).filter(Boolean);
+    var breaks = comms.filter(function(c){ return c.oversep && c.oversep.oversummary; });
+    var thisOver = [], prevOver = [];
+    if(inOver === 0){ prevOver = nowTokens; }
+    else { thisOver = nowTokens; prevOver = beforeTokens || (breaks.length ? cbTokens(breaks[0].oversep.oversummary) : []); }
+
+    function bat(b){
+      if(!b || !b.name) return null;
+      return {id: b.id, name: b.name, runs: b.runs || 0, balls: b.balls || 0, fours: b.fours || 0, six: b.sixes || 0};
+    }
+    var bw = ms.bowlerstriker;
+    var ball = comms.filter(function(c){ return c.commtxt && c.overnum > 0; })[0] || null;
+    var comm = null;
+    if(ball){
+      var txt = cbExpand(ball);
+      var who = txt.match(/^(.+?) to (.+?),\s*(.*)$/);
+      comm = {label: String(ball.overnum), bowler: who ? who[1] : "", batter: who ? who[2] : "", text: who ? who[3] : txt};
+    }
+    var ps = String(ms.partnership || "").match(/(\d+)\((\d+)\)/);
+    var wp = j.winprobability;
+    return {
+      at: Date.now(),
+      innings: inns.length,
+      score: cur ? {runs: cur.runs, wkts: cur.wickets, balls: legal} : null,
+      striker: bat(ms.batsmanstriker), nonStriker: bat(ms.batsmannonstriker),
+      bowler: bw && bw.name ? {name: bw.name, stat: bw.overs + "-" + (bw.maidens || 0) + "-" + (bw.runs || 0) + "-" + (bw.wickets || 0), econ: +bw.economy || 0} : null,
+      thisOver: thisOver, prevOver: prevOver, overNo: done,
+      lastBall: (thisOver.length ? thisOver : prevOver).slice(-1)[0] || null,
+      pship: ps ? {runs: +ps[1], balls: +ps[2]} : null,
+      lastWicketText: cbClean(ms.lastwkt),
+      win: wp && wp.team1 && wp.team2 ? [{name: wp.team1.name, pct: wp.team1.percent}, {name: wp.team2.name, pct: wp.team2.percent}] : null,
+      comm: comm
+    };
+  }
+
+  function cbFreshData(m){
+    var d = m && cbData[m.cricapiId];
+    return d && Date.now() - d.at < CB_STALE_MS ? d : null;
+  }
+
+  // keep each batter in the same card when strike changes
+  function cbOrderBatters(matchId, a, b){
+    var bats = [a, b].filter(Boolean);
+    var slots = cbSlots[matchId] || [];
+    var out = [null, null];
+    bats.forEach(function(x){ var i = slots.indexOf(x.id); if(i !== -1 && !out[i]) out[i] = x; });
+    bats.forEach(function(x){ if(out.indexOf(x) === -1){ var i = out[0] ? 1 : 0; if(!out[i]) out[i] = x; } });
+    cbSlots[matchId] = out.map(function(x){ return x ? x.id : null; });
+    return out;
+  }
+
+  function applyCricbuzz(m, cb){
+    if(!m || m.isDemo || !cb || !(cb.striker || cb.nonStriker)) return m;
+    var order = cbOrderBatters(m.cricapiId, cb.striker, cb.nonStriker);
+    m.batters = order.map(function(b){
+      if(!b) return {name:"—", stat:"0 (0)", strike:false};
+      return {name: b.name, stat: b.runs + " (" + b.balls + ")", strike: !!cb.striker && b.id === cb.striker.id,
+        fours: b.fours, six: b.six, sr: b.balls ? +(b.runs * 100 / b.balls).toFixed(1) : 0};
+    });
+    if(cb.bowler) m.bowler = cb.bowler;
+    m.thisOver = cb.thisOver.slice();
+    m.prevOver = cb.prevOver.slice();
+    m._manualOverNo = cb.overNo;
+    m.partnership = cb.pship;
+    m.lastWicket = null;
+    m.lastWicketText = cb.lastWicketText;
+    if(cb.win){
+      var batting = cb.win.filter(function(w){ return cbTeamKey(w.name) === cbTeamKey(m.battingNow); })[0];
+      if(batting) m.winProb = {batPct: batting.pct, bowlPct: 100 - batting.pct};
+    }
+    if(cb.lastBall){
+      m._lastBallValue = cb.lastBall;
+      if(cb.comm){
+        m._lastBallLabel = cb.comm.label;
+        m._lastBowler = cb.comm.bowler || (cb.bowler && cb.bowler.name);
+        m._lastFacedBatter = cb.comm.batter;
+        m._commText = cb.comm.text;
+      }
+    }
+    // Cricbuzz is usually a ball or two ahead of CricAPI: use its total when it's the same innings and not behind
+    if(cb.score && cb.innings === (m.allInnings || []).length && cb.score.balls >= oversToBalls(m.score.overs)){
+      m.score = {runs: cb.score.runs, wkts: cb.score.wkts, overs: Math.floor(cb.score.balls / 6) + "." + (cb.score.balls % 6)};
+      m.crr = cb.score.balls ? +(cb.score.runs * 6 / cb.score.balls).toFixed(2) : 0;
+      var maxOvers = LIMITED_OVERS[m.matchType];
+      if(maxOvers && m.target){
+        m.ballsRemaining = Math.max(maxOvers * 6 - cb.score.balls, 0);
+        m.rrr = m.ballsRemaining ? +(Math.max(m.target - m.score.runs, 0) * 6 / m.ballsRemaining).toFixed(2) : null;
+      }
+    }
+    m._autoPlayers = true;
+    return m;
+  }
+
+  function renderCbNote(){
+    var el = $("cbNote");
+    if(!cbKeys.length){ el.className = "status-note"; el.textContent = "No Cricbuzz key — player cards come from the Scorer."; return; }
+    el.className = "status-note" + (cbStatus.indexOf("Couldn't") === 0 ? " err" : " ok");
+    el.textContent = cbStatus + (cbStatus ? " · " : "") + cbRequestsLeft() + " Cricbuzz requests left today" + (cbKeys.length > 1 ? " across " + cbKeys.length + " keys" : "");
+  }
+
+  async function cbTick(){
+    clearTimeout(cbTimer);
+    try{
+      var m = activeSport === "cricket" ? findActiveMatch() : null;
+      if(cbKeys.length && m && !m.isDemo && m.cricapiId){
+        if(!cbIdFor[m.cricapiId] && Date.now() - cbLiveListAt > CB_LIST_EVERY_MS) await cbRefreshLiveList();
+        var cbId = cbIdFor[m.cricapiId];
+        if(cbId){
+          var parsed = parseCricbuzzComm(await cbFetch("/mcenter/v1/" + cbId + "/comm"));
+          if(parsed){
+            cbData[m.cricapiId] = parsed;
+            applyCricbuzz(m, parsed);
+            renderCricket();
+            cbStatus = "Live players on (updated " + new Date().toLocaleTimeString() + ")";
+          }
+        } else {
+          cbStatus = "Couldn't find " + m.teamA + " vs " + m.teamB + " on Cricbuzz yet";
+        }
+      } else if(cbKeys.length){
+        cbStatus = "Waiting for a live match";
+      }
+    } catch(err){
+      cbStatus = "Couldn't reach Cricbuzz (" + err.message + ")";
+    }
+    renderCbNote();
+    // with no Cricbuzz requests left, check back less often
+    cbTimer = setTimeout(cbTick, cbRequestsLeft() > 0 ? CB_POLL_MS : 30 * 60000);
+  }
+
+  // a live match just appeared but Cricbuzz has nothing for it yet: check now instead of waiting a minute
+  function cbKickIfMissing(){
+    if(!cbKeys.length) return;
+    var m = findActiveMatch();
+    if(m && !m.isDemo && !cbFreshData(m)){ clearTimeout(cbTimer); cbTimer = setTimeout(cbTick, 800); }
+  }
+
+  function startCricbuzz(raw){
+    cbKeys = parseKeys(raw);
+    renderCbNote();
+    clearTimeout(cbTimer);
+    if(cbKeys.length) cbTimer = setTimeout(cbTick, 2500);
+  }
+
+  var savedCbKey = "";
+  try { savedCbKey = localStorage.getItem("floodlight_rapidapi_key") || ""; } catch(e){}
+  $("cbKeyInput").value = savedCbKey;
+  $("cbSaveBtn").addEventListener("click", function(){
+    var raw = parseKeys($("cbKeyInput").value).join("\n");
+    $("cbKeyInput").value = raw;
+    try { if(raw) localStorage.setItem("floodlight_rapidapi_key", raw); else localStorage.removeItem("floodlight_rapidapi_key"); } catch(e){}
+    startCricbuzz(raw);
+  });
+  if(!SCORER_MODE) startCricbuzz(savedCbKey);
 })();
 </script>
