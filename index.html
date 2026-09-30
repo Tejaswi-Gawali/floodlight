@@ -431,6 +431,12 @@
   .rolling-ball .ball-seam{transform-origin:50px 50px;animation:ball-spin 1.8s linear infinite;}
   @keyframes ball-spin{to{transform:rotate(360deg);}}
   @keyframes ball-bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+  .rolling-ball.card-ball{
+    width:46px;height:46px;align-self:center;margin-left:6px;
+    background:radial-gradient(circle at 40% 35%,#123a9c 0%,#081f5c 65%,#04112f 100%);
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,0.25), 0 4px 10px rgba(0,0,0,0.45);
+  }
+  .rolling-ball.card-ball svg{width:34px;height:34px;}
   .card-bat{display:inline-block;width:20px;height:58px;align-self:center;margin-left:4px;flex-shrink:0;}
   .card-bat svg{
     width:100%;height:100%;display:block;overflow:visible;
@@ -1425,7 +1431,7 @@
             <div class="pc-body">
               <div class="role-header"><span class="pc-flag" id="bcFlag3"></span><span class="role-tag">Bowler</span></div>
               <div class="pc-name" id="bcName3">—</div>
-              <div class="pscore-wrap"><span class="pscore" id="bcScore3">0-0</span><span class="pballs" id="bcBalls3">(0)</span></div>
+              <div class="pscore-wrap"><span class="pscore" id="bcScore3">0-0</span><span class="pballs" id="bcBalls3">(0)</span><span class="rolling-ball card-ball" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><radialGradient id="ballShadeCard" cx="38%" cy="32%" r="72%"><stop offset="0" stop-color="#ff6d5e"/><stop offset="0.45" stop-color="#d0181b"/><stop offset="1" stop-color="#560405"/></radialGradient><clipPath id="ballClipCard"><circle cx="50" cy="50" r="46"/></clipPath></defs><circle cx="50" cy="50" r="46" fill="url(#ballShadeCard)"/><g clip-path="url(#ballClipCard)"><g class="ball-seam"><path d="M-4 30 Q50 72 104 30" fill="none" stroke="#8a0d10" stroke-width="7"/><path d="M-4 27 Q50 69 104 27" fill="none" stroke="#fff1d0" stroke-width="1.8" stroke-dasharray="3.2 2.4"/><path d="M-4 33 Q50 75 104 33" fill="none" stroke="#fff1d0" stroke-width="1.8" stroke-dasharray="3.2 2.4"/></g></g><ellipse cx="36" cy="30" rx="15" ry="9" fill="rgba(255,255,255,0.32)"/></svg></span></div>
               <div class="pstats">Econ <b id="bcEcon3">0.00</b></div>
             </div>
           </div>
