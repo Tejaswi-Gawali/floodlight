@@ -420,6 +420,33 @@
     color:#ffab1f;text-transform:uppercase;transform:skewX(-8deg);
     text-shadow:0 3px 0 #7a3300, 0 0 16px rgba(255,150,20,0.35);
   }
+  .bowl-line{display:flex;align-items:center;justify-content:center;gap:14px;}
+  .rolling-ball{
+    width:66px;height:66px;flex-shrink:0;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 40% 35%,#3f78ea 0%,#123a9c 60%,#081f5c 100%);
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,0.22), 0 5px 12px rgba(0,0,0,0.45);
+  }
+  .rolling-ball svg{width:50px;height:50px;display:block;overflow:visible;animation:ball-bob 1.6s ease-in-out infinite;}
+  .rolling-ball .ball-seam{transform-origin:50px 50px;animation:ball-spin 1.8s linear infinite;}
+  @keyframes ball-spin{to{transform:rotate(360deg);}}
+  @keyframes ball-bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+  .card-bat{display:inline-block;width:20px;height:58px;align-self:center;margin-left:4px;flex-shrink:0;}
+  .card-bat svg{
+    width:100%;height:100%;display:block;overflow:visible;
+    transform-origin:50% 6%;animation:bat-swing 1.9s ease-in-out infinite;
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,0.45));
+  }
+  .bcast-player-card:nth-child(2) .card-bat svg{animation-delay:-0.9s;}
+  @keyframes bat-swing{
+    0%,100%{transform:rotate(38deg);}
+    45%{transform:rotate(-28deg);}
+    60%{transform:rotate(-20deg);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .rolling-ball svg, .rolling-ball .ball-seam, .card-bat svg{animation:none;}
+    .card-bat svg{transform:rotate(30deg);}
+  }
   .bcast-lastball{
     position:relative;align-self:stretch;justify-self:stretch;min-height:96px;border-radius:14px;flex-shrink:0;
     background:linear-gradient(180deg,#2a2d33 0%,#07080a 55%,#000 100%);
@@ -531,18 +558,27 @@
     100%{background-position:100% 100%;}
   }
 
-  /* piano-key equalizer hanging from the top of the ground, driven by commentary audio */
-  .eq-bars{
-    position:absolute;top:0;left:2.5%;right:2.5%;height:min(30%,130px);z-index:4;pointer-events:none;
-    display:flex;align-items:flex-start;gap:0.9%;
+  /* piano-key equalizers down the left and right edges of the ground, driven by commentary audio */
+  .eq-side{
+    position:absolute;top:3%;bottom:162px;width:min(17%,180px);z-index:4;pointer-events:none;
+    display:flex;flex-direction:column;justify-content:space-between;gap:5px;
   }
+  .eq-side.left{left:0;}
+  .eq-side.right{right:0;}
+  .bcast-stadium.no-players .eq-side{bottom:3%;}
   .eq-bar{
-    flex:1;height:100%;transform-origin:top center;transform:scaleY(0.14);
-    background:linear-gradient(180deg,#2a0306 0%,#5a0a12 70%,#7a1420 100%);
-    border:1px solid rgba(255,255,255,0.08);border-top:none;border-radius:0 0 3px 3px;
-    box-shadow:0 4px 8px rgba(0,0,0,0.35);will-change:transform;
+    flex:1;min-height:4px;width:100%;transform-origin:left center;transform:scaleX(0.14);
+    background:linear-gradient(90deg,#2a0306 0%,#5a0a12 70%,#7a1420 100%);
+    border:1px solid rgba(255,255,255,0.08);border-left:none;border-radius:0 3px 3px 0;
+    box-shadow:4px 0 8px rgba(0,0,0,0.35);will-change:transform;
   }
-  .eq-bars.hot .eq-bar{background:linear-gradient(180deg,#3a0408 0%,#8e1220 65%,#d9313f 100%);}
+  .eq-side.right .eq-bar{
+    transform-origin:right center;border-left:1px solid rgba(255,255,255,0.08);border-right:none;
+    border-radius:3px 0 0 3px;box-shadow:-4px 0 8px rgba(0,0,0,0.35);
+    background:linear-gradient(270deg,#2a0306 0%,#5a0a12 70%,#7a1420 100%);
+  }
+  .eq-side.hot .eq-bar{background:linear-gradient(90deg,#3a0408 0%,#8e1220 65%,#d9313f 100%);}
+  .eq-side.right.hot .eq-bar{background:linear-gradient(270deg,#3a0408 0%,#8e1220 65%,#d9313f 100%);}
 
   /* small distant player silhouettes moving on the pitch, over the real photo */
   .pitch-action{position:absolute;inset:0;z-index:2;pointer-events:none;}
@@ -937,6 +973,9 @@
     .bcast-badge-circle{width:76px;height:54px;}
     .bcast-score{font-size:50px;}
     .bcast-fielding-label{font-size:42px;}
+    .rolling-ball{width:52px;height:52px;}
+    .rolling-ball svg{width:38px;height:38px;}
+    .card-bat{height:46px;width:16px;}
     .bcast-lastball{font-size:56px;min-height:80px;}
     .bcast-player-card .avatar{width:88px;}
     .bcast-player-card .pc-name{font-size:22px;}
@@ -955,6 +994,7 @@
     .bcast-stadium{height:auto;padding:200px 8px 8px;}
     .bcast-players-row{position:relative;left:auto;right:auto;bottom:auto;grid-template-columns:1fr;}
     .bcast-player-card{min-height:112px;}
+    .eq-side, .bcast-stadium.no-players .eq-side{top:8px;bottom:auto;height:184px;width:22%;gap:4px;}
   }
 
   /* ---------- sections ---------- */
@@ -1133,7 +1173,28 @@
         <div class="bcast-team-panel bowl" id="bcTeamB">
           <div class="bcast-team-inner">
             <div class="bcast-team-name" id="bcTeamNameB">—</div>
-            <div class="bcast-fielding-label">Bowling</div>
+            <div class="bowl-line">
+              <span class="rolling-ball" aria-hidden="true">
+                <svg viewBox="0 0 100 100">
+                  <defs>
+                    <radialGradient id="ballShade" cx="38%" cy="32%" r="72%">
+                      <stop offset="0" stop-color="#ff6d5e"/><stop offset="0.45" stop-color="#d0181b"/><stop offset="1" stop-color="#560405"/>
+                    </radialGradient>
+                    <clipPath id="ballClip"><circle cx="50" cy="50" r="46"/></clipPath>
+                  </defs>
+                  <circle cx="50" cy="50" r="46" fill="url(#ballShade)"/>
+                  <g clip-path="url(#ballClip)">
+                    <g class="ball-seam">
+                      <path d="M-4 30 Q50 72 104 30" fill="none" stroke="#8a0d10" stroke-width="7"/>
+                      <path d="M-4 27 Q50 69 104 27" fill="none" stroke="#fff1d0" stroke-width="1.8" stroke-dasharray="3.2 2.4"/>
+                      <path d="M-4 33 Q50 75 104 33" fill="none" stroke="#fff1d0" stroke-width="1.8" stroke-dasharray="3.2 2.4"/>
+                    </g>
+                  </g>
+                  <ellipse cx="36" cy="30" rx="15" ry="9" fill="rgba(255,255,255,0.32)"/>
+                </svg>
+              </span>
+              <div class="bcast-fielding-label">Bowling</div>
+            </div>
             <div class="bcast-overs" hidden>OVERS: <span id="bcOversB">0</span></div>
           </div>
           <div class="bcast-badge-circle" id="bcBadgeB"><span id="bcBadgeBInitials">—</span></div>
@@ -1185,7 +1246,8 @@
         <div class="flash" style="left:58%;top:10%;animation-delay:0.5s;animation-duration:3.4s;"></div>
         <div class="flash" style="left:32%;top:88%;animation-delay:4.2s;animation-duration:4.4s;"></div>
         <div class="flash" style="left:78%;top:65%;animation-delay:3.6s;animation-duration:5.8s;"></div>
-        <div class="eq-bars" id="eqBars" aria-hidden="true"></div>
+        <div class="eq-side left" id="eqLeft" aria-hidden="true"></div>
+        <div class="eq-side right" id="eqRight" aria-hidden="true"></div>
         <div class="pitch-action">
           <div class="sil" id="silBowler"></div>
           <div class="sil" id="silBatter"></div>
@@ -1210,7 +1272,7 @@
             <div class="pc-body">
               <div class="role-header"><span class="pc-flag" id="bcFlag1"></span><span class="role-tag">Batter</span></div>
               <div class="pc-name" id="bcName1">—</div>
-              <div class="pscore-wrap"><span class="pscore" id="bcScore1">0</span><span class="pballs" id="bcBalls1">(0)</span></div>
+              <div class="pscore-wrap"><span class="pscore" id="bcScore1">0</span><span class="pballs" id="bcBalls1">(0)</span><span class="card-bat" aria-hidden="true"><svg viewBox="0 0 30 92"><defs><linearGradient id="batWood1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#caa15f"/><stop offset="0.5" stop-color="#f4dfae"/><stop offset="1" stop-color="#b98c4c"/></linearGradient></defs><rect x="12" y="1" width="6" height="30" rx="2.5" fill="#1f2a44"/><path d="M12 7h6M12 12h6M12 17h6M12 22h6" stroke="#3d4f7a" stroke-width="1.4"/><path d="M11 30h8l5 4v50q0 6-9 6t-9-6V34z" fill="url(#batWood1)" stroke="#8a6431" stroke-width="1"/><path d="M15 36v48" stroke="rgba(120,80,30,0.35)" stroke-width="1.2"/></svg></span></div>
               <div class="pstats">4s <b id="bc4s1">0</b> · 6s <b id="bc6s1">0</b> · SR <b id="bcSr1">0.00</b></div>
             </div>
           </div>
@@ -1219,7 +1281,7 @@
             <div class="pc-body">
               <div class="role-header"><span class="pc-flag" id="bcFlag2"></span><span class="role-tag">Batter</span></div>
               <div class="pc-name" id="bcName2">—</div>
-              <div class="pscore-wrap"><span class="pscore" id="bcScore2">0</span><span class="pballs" id="bcBalls2">(0)</span></div>
+              <div class="pscore-wrap"><span class="pscore" id="bcScore2">0</span><span class="pballs" id="bcBalls2">(0)</span><span class="card-bat" aria-hidden="true"><svg viewBox="0 0 30 92"><defs><linearGradient id="batWood2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#caa15f"/><stop offset="0.5" stop-color="#f4dfae"/><stop offset="1" stop-color="#b98c4c"/></linearGradient></defs><rect x="12" y="1" width="6" height="30" rx="2.5" fill="#1f2a44"/><path d="M12 7h6M12 12h6M12 17h6M12 22h6" stroke="#3d4f7a" stroke-width="1.4"/><path d="M11 30h8l5 4v50q0 6-9 6t-9-6V34z" fill="url(#batWood2)" stroke="#8a6431" stroke-width="1"/><path d="M15 36v48" stroke="rgba(120,80,30,0.35)" stroke-width="1.2"/></svg></span></div>
               <div class="pstats">4s <b id="bc4s2">0</b> · 6s <b id="bc6s2">0</b> · SR <b id="bcSr2">0.00</b></div>
             </div>
           </div>
@@ -2722,15 +2784,17 @@
   });
 
   /* ---------------- commentary equalizer ---------------- */
-  var EQ_BAR_COUNT = 22;
-  var eqEl = $("eqBars");
+  var EQ_BAR_COUNT = 12; // per side
+  var eqSides = [$("eqLeft"), $("eqRight")];
   var eqBars = [];
-  for(var eqi = 0; eqi < EQ_BAR_COUNT; eqi++){
-    var barEl = document.createElement("div");
-    barEl.className = "eq-bar";
-    eqEl.appendChild(barEl);
-    eqBars.push({el:barEl, v:0.14, phase:Math.random()*Math.PI*2, speed:0.6 + Math.random()*1.4});
-  }
+  eqSides.forEach(function(side){
+    for(var eqi = 0; eqi < EQ_BAR_COUNT; eqi++){
+      var barEl = document.createElement("div");
+      barEl.className = "eq-bar";
+      side.appendChild(barEl);
+      eqBars.push({el:barEl, key:eqi, v:0.14, phase:Math.random()*Math.PI*2, speed:0.6 + Math.random()*1.4});
+    }
+  });
   var eqBoostLevel = 0;
   var micAnalyser = null, micFreq = null, micTime = null, micStream = null, micPeak = 0.04;
   var eqReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2756,16 +2820,16 @@
     if(micAnalyser){ level = micLevel(); micAnalyser.getByteFrequencyData(micFreq); }
     eqBoostLevel *= 0.993;
     var drive = Math.max(level, eqBoostLevel);
-    eqBars.forEach(function(b, i){
+    eqBars.forEach(function(b){
       var idle = 0.16 + 0.07 * Math.sin(t * b.speed * 2 + b.phase);
-      // spread the bars over the voice range (~0-5 kHz)
-      var bin = micFreq ? micFreq[1 + Math.floor(i * micFreq.length * 0.2 / EQ_BAR_COUNT)] / 255
-                        : 0.5 + 0.25 * Math.sin(t * b.speed * 7 + b.phase) + 0.25 * Math.sin(t * 11.3 + i * 1.7);
+      // spread each column's keys over the voice range (~0-5 kHz); both sides mirror the same bands
+      var bin = micFreq ? micFreq[1 + Math.floor(b.key * micFreq.length * 0.2 / EQ_BAR_COUNT)] / 255
+                        : 0.5 + 0.25 * Math.sin(t * b.speed * 7 + b.phase) + 0.25 * Math.sin(t * 11.3 + b.key * 1.7);
       var target = Math.min(1, idle + drive * (0.4 + 0.6 * bin));
       b.v += (target - b.v) * (target > b.v ? 0.45 : 0.18);
-      b.el.style.transform = "scaleY(" + b.v.toFixed(3) + ")";
+      b.el.style.transform = "scaleX(" + b.v.toFixed(3) + ")";
     });
-    eqEl.classList.toggle("hot", drive > 0.55);
+    eqSides.forEach(function(side){ side.classList.toggle("hot", drive > 0.55); });
     requestAnimationFrame(eqFrame);
   }
   if(!eqReduced) requestAnimationFrame(eqFrame);
