@@ -1544,7 +1544,7 @@
     </section>
   </div>
 
-  <footer id="pageFooter">Football live scores are pulled in real time from TheSportsDB. Cricket shows demo data unless you add a free CricAPI key in Settings.</footer>
+  <footer id="pageFooter">Football live scores are pulled in real time from TheSportsDB. Cricket shows demo data unless you add a free CricAPI key in Settings.<br>Waving India flag: <a href="https://www.allwavingflags.com/2018/06/flag-of-india.html" target="_blank" rel="noopener">All Waving Flags</a> (CC BY 4.0). Other flags: flagcdn.com.</footer>
 </div>
 
 <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -2131,6 +2131,15 @@
     "denmark":"dk","norway":"no","israel":"il","qatar":"qa","kuwait":"kw","saudi arabia":"sa",
     "bahrain":"bh","brazil":"br","argentina":"ar","vanuatu":"vu","fiji":"fj","samoa":"ws"
   };
+  // animated waving flags from allwavingflags.com (CC BY 4.0 — credited with a link in the page footer)
+  var WAVING_FLAGS = {
+    "in": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgue14weiXoEkQcDOi7APSX8mShnFIF3Z5VRooL7FTb5r0VeZ1uKMz624lHr4Trm4ouCcP3cbjxpUjzweGb0swxqTpqeuW_udnq_NZkKu88kz4SRwyIGrULWtpXmOBeX0XUdRjBmXBlH_0/s0-e90-rw/Flag_of_India.gif"
+  };
+  // flags and our own badges fill their frame; team logos are shown whole
+  function isFlagImage(url){
+    return url.indexOf("flagcdn.com") !== -1 || url.indexOf("data:image/svg") === 0 || url.indexOf("blogger.googleusercontent.com") !== -1;
+  }
+
   function countryFlagUrl(name){
     if(!name) return null;
     var n = String(name).toLowerCase().trim()
@@ -2138,7 +2147,7 @@
       .trim();
     var code = COUNTRY_FLAGS[n];
     if(!code) return null;
-    return "https://flagcdn.com/w160/" + code + ".png";
+    return WAVING_FLAGS[code] || ("https://flagcdn.com/w160/" + code + ".png");
   }
 
   function renderTeamBadge(el, code, imgUrl){
@@ -2149,7 +2158,7 @@
       el.innerHTML = "";
       var img = document.createElement("img");
       img.src = imgUrl; img.alt = code;
-      img.style.cssText = "width:100%;height:100%;object-fit:" + (imgUrl.indexOf("flagcdn.com") !== -1 || imgUrl.indexOf("data:image/svg") === 0 ? "cover" : "contain") + ";";
+      img.style.cssText = "width:100%;height:100%;object-fit:" + (isFlagImage(imgUrl) ? "cover" : "contain") + ";";
       img.onerror = function(){ el.innerHTML = teamCrestSVG(code); };
       el.appendChild(img);
     } else {
@@ -3180,7 +3189,7 @@
   function ixBadge(m, team){
     var url = teamBadgeUrl(m, team);
     if(!url) return '<span class="ix-badge">' + teamCrestSVG(teamCode(team).slice(0,2)) + '</span>';
-    var fit = (url.indexOf("flagcdn.com") !== -1 || url.indexOf("data:image/svg") === 0) ? "cover" : "contain";
+    var fit = isFlagImage(url) ? "cover" : "contain";
     return '<span class="ix-badge"><img src="' + esc(url) + '" alt="" style="object-fit:' + fit + ';"></span>';
   }
 
