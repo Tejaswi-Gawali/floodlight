@@ -456,6 +456,28 @@
     font-family:"Teko",sans-serif;font-size:72px;font-weight:700;color:#fff;
     z-index:2;
   }
+  .lb-value{position:relative;z-index:1;text-shadow:0 3px 10px rgba(0,0,0,0.75);}
+  /* fireball that keeps flying through the box from right to left, behind the number */
+  .lb-track{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;}
+  .lb-fireball{
+    position:absolute;top:50%;left:105%;width:64%;max-width:130px;margin-top:-6%;
+    animation:fb-fly 2.3s linear infinite;
+    filter:drop-shadow(0 0 6px rgba(255,120,20,0.7));
+  }
+  .lb-fireball svg{display:block;width:100%;height:auto;overflow:visible;}
+  @keyframes fb-fly{
+    0%{left:105%;transform:translateY(8px);}
+    50%{transform:translateY(-8px);}
+    100%{left:-75%;transform:translateY(8px);}
+  }
+  .lb-fireball .flame{transform-origin:20px 20px;animation:fb-flicker 0.18s ease-in-out infinite alternate;}
+  .lb-fireball .flame-inner{animation-duration:0.13s;}
+  @keyframes fb-flicker{from{transform:scale(1,0.82);}to{transform:scale(1.08,1.08);}}
+  .lb-fireball .fb-spin{transform-origin:20px 20px;animation:ball-spin 0.5s linear infinite reverse;}
+  .bcast-lastball.boom .lb-fireball{animation-duration:0.8s;}
+  @media (prefers-reduced-motion: reduce){
+    .lb-track{display:none;}
+  }
   .bcast-lastball::before{
     content:"";position:absolute;inset:-46px;border-radius:50%;z-index:-1;
     background:repeating-conic-gradient(from 0deg, rgba(255,255,255,0.95) 0deg 4deg, transparent 4deg 18deg);
@@ -1169,7 +1191,27 @@
             <div class="bcast-overs">OVERS: <span id="bcOversA">0.0</span></div>
           </div>
         </div>
-        <div class="bcast-lastball" id="bcLastBall">—</div>
+        <div class="bcast-lastball">
+          <span class="lb-track" aria-hidden="true">
+            <span class="lb-fireball">
+              <svg viewBox="0 0 120 40">
+                <defs>
+                  <linearGradient id="fbOuter" x1="0" x2="1"><stop offset="0" stop-color="#ffb21e"/><stop offset="0.5" stop-color="#ff5a14" stop-opacity="0.75"/><stop offset="1" stop-color="#ff2a00" stop-opacity="0"/></linearGradient>
+                  <linearGradient id="fbInner" x1="0" x2="1"><stop offset="0" stop-color="#fff6b0"/><stop offset="0.6" stop-color="#ffd23a" stop-opacity="0.6"/><stop offset="1" stop-color="#ffb000" stop-opacity="0"/></linearGradient>
+                  <radialGradient id="fbBall" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#ff7a66"/><stop offset="0.5" stop-color="#d0181b"/><stop offset="1" stop-color="#5a0405"/></radialGradient>
+                </defs>
+                <path class="flame flame-outer" d="M20 5 C55 6 85 12 118 20 C85 28 55 34 20 35 Z" fill="url(#fbOuter)"/>
+                <path class="flame flame-inner" d="M20 11 C48 12 70 16 96 20 C70 24 48 28 20 29 Z" fill="url(#fbInner)"/>
+                <g class="fb-spin">
+                  <circle cx="20" cy="20" r="11" fill="url(#fbBall)"/>
+                  <path d="M13 12 Q21 20 13 28" fill="none" stroke="#fff1d0" stroke-width="1.3" stroke-dasharray="2 1.6"/>
+                  <path d="M16 11 Q24 20 16 29" fill="none" stroke="#fff1d0" stroke-width="1.3" stroke-dasharray="2 1.6"/>
+                </g>
+              </svg>
+            </span>
+          </span>
+          <span class="lb-value" id="bcLastBall">—</span>
+        </div>
         <div class="bcast-team-panel bowl" id="bcTeamB">
           <div class="bcast-team-inner">
             <div class="bcast-team-name" id="bcTeamNameB">—</div>
@@ -2059,10 +2101,10 @@
       // no ball-by-ball feed: show the broadcast idle states instead of a dash
       var overDone = oversToBalls(m.score.overs) > 0 && oversToBalls(m.score.overs) % 6 === 0;
       pulseText(lbEl, overDone ? "OVER" : "BALL");
-      lbEl.classList.add("lb-word");
-      lbEl.classList.toggle("lb-over", overDone);
+      lbEl.parentNode.classList.add("lb-word");
+      lbEl.parentNode.classList.toggle("lb-over", overDone);
     } else {
-      lbEl.classList.remove("lb-word", "lb-over");
+      lbEl.parentNode.classList.remove("lb-word", "lb-over");
       pulseText(lbEl, lastBall);
     }
     updateCommentary(m, lastBall, m._lastFacedBatter || (m.batters[0] && m.batters[0].name));
