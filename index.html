@@ -2705,8 +2705,8 @@
 
   // several CricAPI keys can be pasted together; each request uses the key with the most hits left
   var cricketKeys = [];
-  var keyQuota = {};           // key -> {used, limit, at, exhaustedAt}
-  var KEY_RETRY_MS = 60 * 60000; // an exhausted key is tried again after an hour, in case its daily quota has reset
+  var keyQuota = {};           // key -> {used, limit, at, retryAt}
+  var KEY_RETRY_MS = 60 * 60000; // a used-up key is tried again after an hour, in case its daily quota has reset
 
   function parseKeys(raw){
     var seen = {};
@@ -2719,7 +2719,7 @@
   function keyHitsLeft(k){
     var q = keyQuota[k];
     if(!q) return 100;
-    if(q.exhaustedAt) return Date.now() - q.exhaustedAt > KEY_RETRY_MS ? 1 : 0;
+    if(q.retryAt) return Date.now() >= q.retryAt ? 1 : 0;
     return Math.max(q.limit - q.used, 0);
   }
   function pickCricketKey(exclude){
@@ -2734,16 +2734,27 @@
   function recordKeyInfo(k, info){
     if(!k || !info || !info.hitsLimit) return;
     var used = info.hitsToday || 0;
-    keyQuota[k] = {used: used, limit: info.hitsLimit, at: Date.now(), exhaustedAt: used >= info.hitsLimit ? Date.now() : 0};
+    keyQuota[k] = {used: used, limit: info.hitsLimit, at: Date.now(), retryAt: used >= info.hitsLimit ? Date.now() + KEY_RETRY_MS : 0};
   }
-  function markKeyExhausted(k){
+  // CricAPI answers e.g. "Blocked for 15 minutes" when a key is called too often: park it for exactly that long
+  function markKeyExhausted(k, reason){
     var q = keyQuota[k] || {limit: 100};
-    keyQuota[k] = {used: q.limit, limit: q.limit, at: Date.now(), exhaustedAt: Date.now()};
+    var blocked = String(reason || "").match(/blocked for (\d+)\s*min/i);
+    var wait = blocked ? (parseInt(blocked[1], 10) * 60000 + 30000) : KEY_RETRY_MS;
+    keyQuota[k] = {used: q.limit, limit: q.limit, at: Date.now(), retryAt: Date.now() + wait};
+  }
+  function soonestKeyRetryMs(){
+    var soonest = Infinity;
+    cricketKeys.forEach(function(k){
+      var q = keyQuota[k];
+      if(q && q.retryAt) soonest = Math.min(soonest, Math.max(q.retryAt - Date.now(), 0));
+    });
+    return soonest;
   }
   function totalHitsLeft(){
     return cricketKeys.reduce(function(sum, k){
       var q = keyQuota[k];
-      return sum + (q && q.exhaustedAt ? 0 : keyHitsLeft(k));
+      return sum + (q && q.retryAt ? 0 : keyHitsLeft(k));
     }, 0);
   }
   var cricketRefreshEveryMs = null;
@@ -2774,7 +2785,7 @@
     if(CRICKET_PROXY_URL) return CRICKET_POLL_MS;
     if(!cricketKeys.length) return CRICKET_POLL_MS;
     var hitsLeft = totalHitsLeft();
-    if(hitsLeft <= 0) return 30 * 60000;
+    if(hitsLeft <= 0) return Math.min(Math.max(soonestKeyRetryMs(), CRICKET_POLL_MS), 30 * 60000);
     var mins = estimateMatchMinutesLeft(cricketRealMatches);
     if(!mins) return CRICKET_POLL_MAX_MS;
     return Math.min(Math.max(mins * 60000 / hitsLeft, CRICKET_POLL_MS), CRICKET_POLL_MAX_MS);
@@ -2964,7 +2975,7 @@
         lastErr = body.message || body.reason || "API rejected the request";
         if(!useKey) throw new Error(lastErr);
         // quota used up or key rejected: park this key and try the next one straight away
-        markKeyExhausted(useKey);
+        markKeyExhausted(useKey, lastErr);
         tried.push(useKey);
       }
       var live = (json.data || []).filter(function(m){ return m.matchStarted && !m.matchEnded; });
