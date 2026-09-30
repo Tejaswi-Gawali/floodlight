@@ -1298,7 +1298,7 @@
 
   <h3>Cricket data</h3>
   <p>Browsers can't read Google's scorecards or scrape scoreboard sites directly (CORS blocks it), but cricket data APIs work fine. Sign up free at <b>cricketdata.org/signup.aspx</b> (formerly CricAPI, no card needed) to get a key.</p>
-  <p style="margin-top:-8px;">Free tier is capped at 100 requests/day, so once connected this polls every 1 minute — about 1 hour 40 minutes of live updates before the daily cap runs out and updates stop until it resets. Faster or longer refresh needs a paid plan (see below).</p>
+  <p style="margin-top:-8px;">Free tier is capped at 100 requests/day, so once connected this refreshes as often as once a minute and automatically slows down so your remaining hits last the whole match. The current interval is shown next to the live matches. Faster refresh needs a paid plan (see below).</p>
   <label class="field-label" for="apiKeyInput">CricAPI / Cricket Data key</label>
   <input class="field-input" id="apiKeyInput" placeholder="Paste your free API key" autocomplete="off">
   <button class="btn" id="goLiveBtn">Fetch live cricket match</button>
@@ -2044,9 +2044,7 @@
     renderScorecard(m);
     renderPoints(m);
     if(!m.isDemo) fetchMatchScorecard(m);
-    $("cricketRefreshNote").textContent = cricketRealMatches.length
-      ? cricketRealMatches.length + " real live match(es) via CricAPI"
-      : "Demo data — add a CricAPI key in Settings for real matches";
+    renderRefreshNote();
   }
 
   /* ---------------- Demo ball-by-ball simulator (keeps the demo matches feeling live) ---------------- */
@@ -2295,13 +2293,63 @@
   try { savedKey = localStorage.getItem("floodlight_cricapi_key") || ""; } catch(e){}
   if(savedKey){ $("apiKeyInput").value = savedKey; $("statusNote").textContent = "Saved key found — press Fetch to use it."; }
 
-  var CRICKET_POLL_MS = 60000; // 1 min — ~1hr40min of live updates/day before the 100-hits/day free tier runs out
+  var CRICKET_POLL_MS = 60000; // fastest refresh; slowed automatically so the daily quota lasts the whole match
+  var CRICKET_POLL_MAX_MS = 600000;
   // When set, every visitor reads the shared Cloudflare proxy (proxy/worker.js) instead of calling CricAPI with a key
   var CRICKET_PROXY_URL = "";
   var cricketPollTimer = null;
+  var cricketPollGen = 0;
+  var lastCricketInfo = null;
+  var cricketRefreshEveryMs = null;
+  var MIN_PER_OVER = {odi:3.6, t20:4.2, t10:4.2};
 
   function stopCricketPolling(){
-    if(cricketPollTimer){ clearInterval(cricketPollTimer); cricketPollTimer = null; }
+    cricketPollGen++;
+    if(cricketPollTimer){ clearTimeout(cricketPollTimer); cricketPollTimer = null; }
+  }
+
+  function estimateMatchMinutesLeft(matches){
+    var most = 0;
+    matches.forEach(function(m){
+      var maxOvers = LIMITED_OVERS[m.matchType];
+      var mins = 360; // Test / first-class: assume a full day's play remains
+      if(maxOvers){
+        var inns = m.allInnings || [];
+        var cur = inns.length ? oversToBalls(inns[inns.length-1].o) / 6 : 0;
+        var oversLeft = Math.max(maxOvers - cur, 0) + (inns.length < 2 ? maxOvers : 0);
+        mins = oversLeft * MIN_PER_OVER[m.matchType] + (inns.length < 2 ? 30 : 0);
+      }
+      most = Math.max(most, mins);
+    });
+    return most;
+  }
+
+  function nextCricketPollMs(){
+    if(CRICKET_PROXY_URL) return CRICKET_POLL_MS;
+    var info = lastCricketInfo;
+    if(!info || !info.hitsLimit) return CRICKET_POLL_MS;
+    var hitsLeft = info.hitsLimit - (info.hitsToday || 0);
+    if(hitsLeft <= 0) return 30 * 60000;
+    var mins = estimateMatchMinutesLeft(cricketRealMatches);
+    if(!mins) return CRICKET_POLL_MAX_MS;
+    return Math.min(Math.max(mins * 60000 / hitsLeft, CRICKET_POLL_MS), CRICKET_POLL_MAX_MS);
+  }
+
+  function scheduleNextCricketPoll(key){
+    var gen = cricketPollGen;
+    cricketRefreshEveryMs = nextCricketPollMs();
+    cricketPollTimer = setTimeout(async function(){
+      await fetchCricketLive(key, {silent:true});
+      if(gen === cricketPollGen) scheduleNextCricketPoll(key);
+    }, cricketRefreshEveryMs);
+    if(activeSport === "cricket") renderRefreshNote();
+  }
+
+  function renderRefreshNote(){
+    var el = $("cricketRefreshNote");
+    if(!cricketRealMatches.length){ el.textContent = "Demo data — add a CricAPI key in Settings for real matches"; return; }
+    var every = cricketRefreshEveryMs ? Math.round(cricketRefreshEveryMs / 60000 * 10) / 10 : null;
+    el.textContent = cricketRealMatches.length + " real live match(es) via CricAPI" + (every ? " · refreshing every " + every + " min" : "");
   }
 
   $("demoBtn").addEventListener("click", function(){
@@ -2322,17 +2370,36 @@
     return found || teams[0];
   }
 
+  var LIMITED_OVERS = {odi:50, t20:20, t10:10};
+  // cricket overs notation: 26.2 = 26 overs + 2 balls
+  function oversToBalls(o){
+    var s = String(o||0).split(".");
+    return (parseInt(s[0],10)||0)*6 + (parseInt(s[1],10)||0);
+  }
+
   function mapCricapiMatch(m){
     var scores = m.score || [];
     var last = scores[scores.length-1] || {r:0,w:0,o:0,inning:""};
     var teams = m.teams || [m.team1 || "Team A", m.team2 || "Team B"];
+    var maxOvers = LIMITED_OVERS[String(m.matchType||"").toLowerCase()] || null;
+    var lastBalls = oversToBalls(last.o);
+    var target = null, ballsRemaining = null, rrr = null;
+    if(maxOvers && scores.length >= 2){
+      target = (scores[0].r||0) + 1;
+      ballsRemaining = Math.max(maxOvers*6 - lastBalls, 0);
+      rrr = ballsRemaining ? +(Math.max(target - (last.r||0), 0) * 6 / ballsRemaining).toFixed(2) : null;
+    }
+    var order = [];
+    scores.forEach(function(s){ var t = matchTeamFromInning(s.inning, teams); if(order.indexOf(t) === -1) order.push(t); });
+    teams.forEach(function(t){ if(order.indexOf(t) === -1) order.push(t); });
     return {
       id: "real-" + m.id, comp: (m.matchType||"cricket").toUpperCase(), teamA: teams[0], teamB: teams[1],
       chip: teams.join(" vs "), sub: m.status || "Live", isDemo:false,
-      inningsOrder: teams, battingNow: matchTeamFromInning(last.inning, teams),
+      inningsOrder: order, battingNow: matchTeamFromInning(last.inning, teams),
       teamInfo: m.teamInfo || [],
       score:{runs:last.r||0, wkts:last.w||0, overs: String(last.o!=null?last.o:0)},
-      target:null, ballsRemaining:null, crr: (last.o ? +(last.r/last.o).toFixed(2) : 0), rrr:null,
+      target:target, ballsRemaining:ballsRemaining, crr: (lastBalls ? +((last.r||0) * 6 / lastBalls).toFixed(2) : 0), rrr:rrr,
+      matchType: String(m.matchType||"").toLowerCase(),
       batters:[{name:"—",stat:"",strike:false},{name:"—",stat:"",strike:false}],
       bowler:{name:"—",stat:""}, thisOver:[], prevOver:[], partnership:null, lastWicket:null, winProb:null,
       scorecards:{}, cricapiId: m.id, fantasyEnabled: !!m.fantasyEnabled,
@@ -2407,7 +2474,8 @@
     try{
       var res = await fetch(CRICKET_PROXY_URL || ("https://api.cricapi.com/v1/currentMatches?apikey=" + encodeURIComponent(key) + "&offset=0"));
       var json = await res.json();
-      if(json.status !== "success") throw new Error(json.message || "API rejected the request");
+      if(json.info) lastCricketInfo = json.info;
+      if(json.status !== "success") throw new Error(json.message || json.reason || "API rejected the request");
       var live = (json.data || []).filter(function(m){ return m.matchStarted && !m.matchEnded; });
       var stamp = new Date().toLocaleTimeString();
       var quota = json.info ? (json.info.hitsUsed + " of " + json.info.hitsLimit + " free hits used today") : "";
@@ -2442,11 +2510,10 @@
 
   async function connectAndPoll(key, silent){
     activeCricketKey = key;
-    var ok = await fetchCricketLive(key, {silent: silent});
     stopCricketPolling();
-    if(ok || CRICKET_PROXY_URL){
-      cricketPollTimer = setInterval(function(){ fetchCricketLive(key, {silent:true}); }, CRICKET_POLL_MS);
-    }
+    var gen = cricketPollGen;
+    var ok = await fetchCricketLive(key, {silent: silent});
+    if(gen === cricketPollGen) scheduleNextCricketPoll(key);
     return ok;
   }
 
