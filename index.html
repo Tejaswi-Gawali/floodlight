@@ -942,6 +942,15 @@
     .watermark-x{top:45vh;left:35vw;}
   }
 
+  .toast{
+    position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:90;max-width:min(560px,92vw);
+    background:rgba(10,18,32,0.96);color:#fff;border:1px solid rgba(231,184,74,0.7);border-radius:12px;
+    padding:10px 16px;font-size:13.5px;line-height:1.4;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.5);
+    animation:toast-in 0.25s ease-out;
+  }
+  @keyframes toast-in{from{opacity:0;transform:translate(-50%,10px);}to{opacity:1;transform:translate(-50%,0);}}
+  body.overlay-mode .toast{display:none !important;}
+
   /* ---------- between-overs graphics: scorecard / team sheets / summary ---------- */
   .interstitial{
     position:fixed;left:0;right:0;top:0;bottom:52px;z-index:62;
@@ -1667,7 +1676,7 @@
   <hr class="divider">
 
   <h3>Between-overs graphics</h3>
-  <p>Like a TV broadcast, a full scorecard, the team sheets and a match summary take turns filling the screen for 15 seconds. Keys: <b>S</b> scorecard, <b>T</b> teams, <b>M</b> summary, <b>Esc</b> close. For OBS add <b>&amp;breaks=3</b> (minutes) to the address, or <b>&amp;breaks=0</b> to switch them off.</p>
+  <p>Like a TV broadcast, a full scorecard, the team sheets and a match summary take turns filling the screen for 15 seconds. Keys (click on the page first so the cursor isn't in a box): <b>S</b> scorecard, <b>T</b> teams, <b>M</b> summary, <b>Esc</b> close. For OBS add <b>&amp;breaks=3</b> (minutes) to the address, or <b>&amp;breaks=0</b> to switch them off.</p>
   <label class="field-label" for="breakSelect">Show one every</label>
   <select class="field-input" id="breakSelect">
     <option value="0">Off</option>
@@ -1707,6 +1716,8 @@
 </div>
 
 <div class="watermark-x" aria-hidden="true"><div class="watermark-y"><div class="watermark" id="watermark">FLOODLIGHT</div></div></div>
+
+<div class="toast" id="toast" hidden role="status"></div>
 
 <div class="interstitial" id="interstitial" hidden aria-live="polite">
   <div class="ix-panel">
@@ -2842,7 +2853,11 @@
   /* ---------------- settings drawer ---------------- */
   var backdrop = $("drawerBackdrop"), drawer = $("drawer");
   function openDrawer(){ backdrop.classList.add("open"); drawer.classList.add("open"); }
-  function closeDrawer(){ backdrop.classList.remove("open"); drawer.classList.remove("open"); }
+  function closeDrawer(){
+    backdrop.classList.remove("open"); drawer.classList.remove("open");
+    var a = document.activeElement;
+    if(a && a !== document.body && drawer.contains(a)) a.blur();
+  }
   $("settingsBtn").addEventListener("click", openDrawer);
   $("closeDrawer").addEventListener("click", closeDrawer);
   backdrop.addEventListener("click", closeDrawer);
@@ -3462,6 +3477,29 @@
     if(need > avail) panel.style.zoom = String(Math.max(0.6, avail / need));
   }
 
+  var toastTimer = null;
+  function showToast(msg){
+    var el = $("toast");
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.hidden = true; }, 3500);
+  }
+  var BREAK_LABEL = {scorecard:"The full scorecard", squads:"The team sheet", summary:"The match summary"};
+
+  // physical key ("KeyS") so shortcuts work on any keyboard layout (Hindi, Caps Lock, ...)
+  function pressedKey(e){
+    if(e.code && /^Key[A-Z]$/.test(e.code)) return e.code.slice(3).toLowerCase();
+    if(e.code && /^(Digit|Numpad)[0-9]$/.test(e.code)) return e.code.slice(-1);
+    return (e.key || "").toLowerCase();
+  }
+  // typing in a Settings box shouldn't trigger shortcuts, but a leftover cursor in a closed drawer shouldn't block them
+  function typingInField(e){
+    var tag = (e.target && e.target.tagName) || "";
+    if(tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") return false;
+    return !SCORER_MODE && !drawer.classList.contains("open") ? false : true;
+  }
+
   function showBreak(type){
     if(activeSport !== "cricket") return false;
     var m = findActiveMatch();
@@ -3530,14 +3568,17 @@
   $("breakTeamsBtn").addEventListener("click", function(){ manualBreak("squads", "The team sheet"); });
   $("breakSummaryBtn").addEventListener("click", function(){ manualBreak("summary", "The summary"); });
   document.addEventListener("keydown", function(e){
-    if(SCORER_MODE || e.ctrlKey || e.metaKey || e.altKey) return;
-    var tag = (e.target && e.target.tagName) || "";
-    if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-    var k = (e.key || "").toLowerCase();
-    if(k === "escape") hideBreak();
-    else if(k === "s") showBreak("scorecard");
-    else if(k === "t") showBreak("squads");
-    else if(k === "m") showBreak("summary");
+    if(SCORER_MODE || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if(typingInField(e)) return;
+    var k = pressedKey(e);
+    var type = k === "s" ? "scorecard" : k === "t" ? "squads" : k === "m" ? "summary" : null;
+    if(e.key === "Escape") hideBreak();
+    else if(type){
+      if(!showBreak(type)){
+        showToast(activeSport !== "cricket" ? "Switch to the Cricket tab to show this." :
+          BREAK_LABEL[type] + " isn't available for this match — the live feed doesn't provide it.");
+      }
+    }
   });
   if(!SCORER_MODE) scheduleBreak(Math.min(45000, breakEveryMin * 60000));
 
@@ -3791,7 +3832,7 @@
       if(e.ctrlKey || e.metaKey || e.altKey) return;
       var tag = (e.target && e.target.tagName) || "";
       if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      var k = (e.key || "").toLowerCase();
+      var k = pressedKey(e);
       if(SC_KEYS[k]){ e.preventDefault(); recordBall(SC_KEYS[k]); }
       else if(k === "s"){ e.preventDefault(); swapStrike(); }
       else if(k === "u"){ e.preventDefault(); undoBall(); }
