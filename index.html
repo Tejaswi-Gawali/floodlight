@@ -1558,7 +1558,7 @@
 
   <h3>Cricket data</h3>
   <p>Browsers can't read Google's scorecards or scrape scoreboard sites directly (CORS blocks it), but cricket data APIs work fine. Sign up free at <b>cricketdata.org/signup.aspx</b> (formerly CricAPI, no card needed) to get a key.</p>
-  <p style="margin-top:-8px;">Free tier is capped at 100 requests/day, so once connected this refreshes as often as once a minute and automatically slows down so your remaining hits last the whole match. The current interval is shown next to the live matches. Faster refresh needs a paid plan (see below).</p>
+  <p style="margin-top:-8px;">Free tier is capped at 100 requests/day, so once connected the live score refreshes every minute (about 100 minutes of live play per key per day — paste several keys to cover a full match). When nothing is live it only checks every 5 minutes. Faster refresh needs a paid plan (see below).</p>
   <label class="field-label" for="apiKeyInput">CricAPI / Cricket Data key(s)</label>
   <textarea class="field-input key-input" id="apiKeyInput" rows="3" placeholder="One key, or several — one per line or separated by commas" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn" id="goLiveBtn">Fetch live cricket match</button>
@@ -2696,8 +2696,8 @@
   try { savedKey = localStorage.getItem("floodlight_cricapi_key") || ""; } catch(e){}
   if(savedKey){ $("apiKeyInput").value = savedKey; $("statusNote").textContent = "Saved key found — press Fetch to use it."; }
 
-  var CRICKET_POLL_MS = 60000; // fastest refresh; slowed automatically so the daily quota lasts the whole match
-  var CRICKET_POLL_MAX_MS = 600000;
+  var CRICKET_POLL_MS = 60000;       // live score refresh: fixed at 1 minute
+  var CRICKET_IDLE_POLL_MS = 300000; // nothing live yet: check for a match starting every 5 minutes
   // When set, every visitor reads the shared Cloudflare proxy (proxy/worker.js) instead of calling CricAPI with a key
   var CRICKET_PROXY_URL = "";
   var cricketPollTimer = null;
@@ -2758,27 +2758,10 @@
     }, 0);
   }
   var cricketRefreshEveryMs = null;
-  var MIN_PER_OVER = {odi:3.6, t20:4.2, t10:4.2};
 
   function stopCricketPolling(){
     cricketPollGen++;
     if(cricketPollTimer){ clearTimeout(cricketPollTimer); cricketPollTimer = null; }
-  }
-
-  function estimateMatchMinutesLeft(matches){
-    var most = 0;
-    matches.forEach(function(m){
-      var maxOvers = LIMITED_OVERS[m.matchType];
-      var mins = 360; // Test / first-class: assume a full day's play remains
-      if(maxOvers){
-        var inns = m.allInnings || [];
-        var cur = inns.length ? oversToBalls(inns[inns.length-1].o) / 6 : 0;
-        var oversLeft = Math.max(maxOvers - cur, 0) + (inns.length < 2 ? maxOvers : 0);
-        mins = oversLeft * MIN_PER_OVER[m.matchType] + (inns.length < 2 ? 30 : 0);
-      }
-      most = Math.max(most, mins);
-    });
-    return most;
   }
 
   function nextCricketPollMs(){
@@ -2786,9 +2769,7 @@
     if(!cricketKeys.length) return CRICKET_POLL_MS;
     var hitsLeft = totalHitsLeft();
     if(hitsLeft <= 0) return Math.min(Math.max(soonestKeyRetryMs(), CRICKET_POLL_MS), 30 * 60000);
-    var mins = estimateMatchMinutesLeft(cricketRealMatches);
-    if(!mins) return CRICKET_POLL_MAX_MS;
-    return Math.min(Math.max(mins * 60000 / hitsLeft, CRICKET_POLL_MS), CRICKET_POLL_MAX_MS);
+    return cricketRealMatches.length ? CRICKET_POLL_MS : CRICKET_IDLE_POLL_MS;
   }
 
   function scheduleNextCricketPoll(key){
