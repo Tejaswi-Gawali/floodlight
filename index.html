@@ -1305,6 +1305,8 @@
     border:1px solid var(--panel-line);color:var(--text);font-size:13.5px;margin-bottom:14px;
     font-family:"Work Sans",sans-serif;
   }
+  .check-row{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text);cursor:pointer;}
+  .check-row input{width:16px;height:16px;accent-color:var(--accent);}
   .key-input{resize:vertical;min-height:62px;line-height:1.45;font-family:ui-monospace,Consolas,monospace;font-size:12px;}
   .field-input:focus-visible{outline:2px solid var(--six);outline-offset:1px;}
   .btn{
@@ -1713,6 +1715,8 @@
   <textarea class="field-input key-input" id="cbKeyInput" rows="2" placeholder="X-RapidAPI-Key for cricbuzz-cricket2" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn secondary" id="cbSaveBtn">Save Cricbuzz key</button>
   <div class="status-note" id="cbNote">No Cricbuzz key — player cards come from the Scorer.</div>
+  <label class="check-row"><input type="checkbox" id="cbTextToggle"> Also show Cricbuzz's own commentary sentences</label>
+  <p style="margin-top:2px;font-size:12px;">Off by default: the numbers, names and balls still come from Cricbuzz, but the commentary line under each ball is written by Floodlight. Cricbuzz's sentences are their own writing, so only turn this on if you have their permission.</p>
 
   <hr class="divider">
 
@@ -4093,7 +4097,7 @@
         m._lastBallLabel = cb.comm.label;
         m._lastBowler = cb.comm.bowler || (cb.bowler && cb.bowler.name);
         m._lastFacedBatter = cb.comm.batter;
-        m._commText = cb.comm.text;
+        m._commText = cbShowText ? cb.comm.text : undefined;
       }
     }
     // Cricbuzz is usually a ball or two ahead of CricAPI: use its total when it's the same innings and not behind
@@ -4159,6 +4163,16 @@
     clearTimeout(cbTimer);
     if(cbKeys.length) cbTimer = setTimeout(cbTick, 2500);
   }
+
+  var cbShowText = false;
+  try { cbShowText = localStorage.getItem("floodlight_cb_text") === "1"; } catch(e){}
+  $("cbTextToggle").checked = cbShowText;
+  $("cbTextToggle").addEventListener("change", function(){
+    cbShowText = this.checked;
+    try { localStorage.setItem("floodlight_cb_text", cbShowText ? "1" : "0"); } catch(e){}
+    var m = findActiveMatch(), d = m && cbFreshData(m);
+    if(m && d){ m._commText = undefined; lastCommentaryKey = null; applyCricbuzz(m, d); renderCricket(); }
+  });
 
   var savedCbKey = "";
   try { savedCbKey = localStorage.getItem("floodlight_rapidapi_key") || ""; } catch(e){}
