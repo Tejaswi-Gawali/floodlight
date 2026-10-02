@@ -1043,6 +1043,52 @@
     .interstitial.ix-in, .interstitial.ix-in .ix-panel{animation:none;}
   }
 
+  /* ---------- subscriber shout-out ---------- */
+  .sub-alert-wrap{
+    position:fixed;left:50%;bottom:66px;transform:translateX(-50%);z-index:70;pointer-events:none;
+    width:min(760px,94vw);display:flex;flex-direction:column;align-items:center;
+  }
+  body.scorer-mode .sub-alert-wrap{display:none;}
+  .sub-alert{
+    position:relative;display:flex;align-items:center;gap:14px;max-width:100%;
+    padding:10px 26px 10px 12px;border-radius:70px;
+    background:linear-gradient(100deg,#9e1520,#e0303a 45%,#ff8a2a);
+    border:2px solid #ffe08a;color:#fff;
+    box-shadow:0 14px 34px rgba(0,0,0,0.55), 0 0 34px rgba(255,120,40,0.5);
+    animation:sub-in 0.55s cubic-bezier(.2,1.35,.3,1) both;
+  }
+  .sub-alert.leaving{animation:sub-out 0.4s ease-in forwards;}
+  @keyframes sub-in{from{opacity:0;transform:translateY(40px) scale(0.85);}to{opacity:1;transform:none;}}
+  @keyframes sub-out{to{opacity:0;transform:translateY(22px) scale(0.94);}}
+  .sub-bell{
+    width:58px;height:58px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:32px;background:rgba(255,255,255,0.18);box-shadow:inset 0 0 0 2px rgba(255,255,255,0.45);
+    animation:sub-bell 0.9s ease-in-out 0.4s 3;transform-origin:50% 12%;
+  }
+  @keyframes sub-bell{0%,100%{transform:rotate(0);}20%{transform:rotate(18deg);}40%{transform:rotate(-16deg);}60%{transform:rotate(10deg);}80%{transform:rotate(-8deg);}}
+  .sub-body{min-width:0;}
+  .sub-kicker{font-family:"Teko",sans-serif;font-size:17px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#ffe9b0;line-height:1;}
+  .sub-name{font-family:"Teko",sans-serif;font-size:42px;font-weight:700;line-height:1.02;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 3px 0 rgba(0,0,0,0.35);}
+  .sub-thanks{font-family:"Work Sans",sans-serif;font-size:12.5px;color:rgba(255,255,255,0.88);line-height:1.2;}
+  .sub-emoji{
+    position:absolute;bottom:50%;font-size:26px;pointer-events:none;
+    animation:sub-float 2.6s ease-out forwards;
+  }
+  @keyframes sub-float{
+    0%{opacity:0;transform:translate(0,0) scale(0.5);}
+    15%{opacity:1;}
+    100%{opacity:0;transform:translate(var(--dx),-130px) rotate(var(--rot)) scale(1.15);}
+  }
+  @media (max-width:760px){
+    .sub-bell{width:46px;height:46px;font-size:24px;}
+    .sub-name{font-size:32px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .sub-alert, .sub-alert.leaving{animation-duration:0.01s;}
+    .sub-bell, .sub-emoji{animation:none;}
+    .sub-emoji{display:none;}
+  }
+
   /* ---------- manual scorer window (?scorer=1) ---------- */
   body.scorer-mode{padding-bottom:0 !important;}
   body.scorer-mode #cricketView, body.scorer-mode #footballView, body.scorer-mode footer,
@@ -1576,6 +1622,8 @@
         <button class="btn secondary" id="scSwap">⇄ Swap strike</button>
         <button class="btn secondary" id="scUndo">↶ Undo last ball</button>
       </div>
+      <div class="sc-section-title">Subscriber shout-out <span>shows on the stream</span></div>
+      <div class="sc-row"><input class="field-input sc-sub" id="scSubName" placeholder="New subscriber's name, then Enter" maxlength="60" autocomplete="off"><button class="btn secondary sc-small" id="scSubBtn">Show</button></div>
       <div class="sc-keys">Keys: <b>0–4, 6</b> runs · <b>W</b> wicket · <b>E</b> wide · <b>N</b> no-ball · <b>L</b> leg-bye · <b>S</b> swap strike · <b>U</b> undo</div>
     </div>
   </div>
@@ -1668,6 +1716,17 @@
 
   <hr class="divider">
 
+  <h3>Subscriber shout-outs</h3>
+  <p>When someone subscribes, show their name on screen with emojis. Type the name from YouTube Studio's live dashboard and press <b>Enter</b> (several names separated by <b>;</b> queue up). The Scorer window has the same box, so you can do it without leaving it. A chime plays if sound (🔊 in the top bar) is on.</p>
+  <label class="field-label" for="subNameInput">Subscriber name</label>
+  <input class="field-input" id="subNameInput" placeholder="e.g. Rahul Sharma" maxlength="60" autocomplete="off">
+  <div class="btn-row">
+    <button class="btn secondary" id="subShowBtn">Show on screen</button>
+    <button class="btn secondary" id="subTestBtn">Test</button>
+  </div>
+
+  <hr class="divider">
+
   <h3>Channel watermark</h3>
   <p>Your channel name drifts slowly around the screen at low opacity, so recordings of your stream carry it. For OBS, add <b>?overlay=1&amp;channel=YOURNAME</b> to the page address instead.</p>
   <label class="field-label" for="channelInput">Channel name</label>
@@ -1718,6 +1777,7 @@
 <div class="watermark-x" aria-hidden="true"><div class="watermark-y"><div class="watermark" id="watermark">FLOODLIGHT</div></div></div>
 
 <div class="toast" id="toast" hidden role="status"></div>
+<div class="sub-alert-wrap" id="subAlertWrap" aria-live="polite"></div>
 
 <div class="interstitial" id="interstitial" hidden aria-live="polite">
   <div class="ix-panel">
@@ -4101,5 +4161,111 @@
     startCricbuzz(raw);
   });
   if(!SCORER_MODE) startCricbuzz(savedCbKey);
+
+  /* ---------------- subscriber shout-outs: "🔔 NEW SUBSCRIBER — name 🎉" ---------------- */
+  var SUB_SHOW_MS = 7000;
+  var SUB_EMOJIS = ["🎉", "🔔", "❤️", "🔥", "👏", "🥳", "⭐", "🏏", "💥", "🙌"];
+  var SUB_THANKS = ["Thanks for subscribing!", "Welcome to the family!", "Thank you for the support!", "You're awesome!", "Glad to have you here!"];
+  var subQueue = [], subShowing = false, subSeen = {};
+
+  function cleanSubName(raw){
+    return String(raw == null ? "" : raw).replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
+  }
+  function splitSubNames(raw){
+    return String(raw || "").split(/[;\n]+/).map(cleanSubName).filter(Boolean);
+  }
+
+  function showNextSubscriber(){
+    var name = subQueue.shift();
+    if(!name){ subShowing = false; return; }
+    subShowing = true;
+    var wrap = $("subAlertWrap");
+    var el = document.createElement("div");
+    el.className = "sub-alert";
+    var bell = document.createElement("div"); bell.className = "sub-bell"; bell.textContent = "🔔";
+    var body = document.createElement("div"); body.className = "sub-body";
+    var kicker = document.createElement("div"); kicker.className = "sub-kicker"; kicker.textContent = "New subscriber";
+    var nm = document.createElement("div"); nm.className = "sub-name"; nm.textContent = name + " 🎉";
+    var thanks = document.createElement("div"); thanks.className = "sub-thanks";
+    thanks.textContent = SUB_THANKS[Math.floor(Math.random() * SUB_THANKS.length)] + " ❤️";
+    body.appendChild(kicker); body.appendChild(nm); body.appendChild(thanks);
+    el.appendChild(bell); el.appendChild(body);
+    for(var i = 0; i < 14; i++){
+      var em = document.createElement("span");
+      em.className = "sub-emoji";
+      em.textContent = SUB_EMOJIS[Math.floor(Math.random() * SUB_EMOJIS.length)];
+      em.style.left = (6 + Math.random() * 88) + "%";
+      em.style.animationDelay = (Math.random() * 1.4).toFixed(2) + "s";
+      em.style.setProperty("--dx", Math.round(Math.random() * 90 - 45) + "px");
+      em.style.setProperty("--rot", Math.round(Math.random() * 60 - 30) + "deg");
+      el.appendChild(em);
+    }
+    wrap.appendChild(el);
+    playSubChime();
+    setTimeout(function(){
+      el.classList.add("leaving");
+      setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); showNextSubscriber(); }, 420);
+    }, SUB_SHOW_MS);
+  }
+
+  function queueSubscribers(names){
+    names.forEach(function(n){ subQueue.push(n); });
+    if(!subShowing) showNextSubscriber();
+  }
+
+  function playSubChime(){
+    if(!soundEnabled) return;
+    if(!ensureAudioCtx()) return;
+    playTone(784, 0.16, "sine", 0.2, 0);
+    playTone(988, 0.16, "sine", 0.2, 0.14);
+    playTone(1318, 0.34, "sine", 0.22, 0.28);
+  }
+
+  // used by the Settings box on this page and by the Scorer window (which talks to this page through localStorage)
+  function sendSubscribers(raw){
+    var names = splitSubNames(raw);
+    if(!names.length) return 0;
+    if(SCORER_MODE){
+      try { localStorage.setItem("floodlight_sub_alert", JSON.stringify({id: Date.now() + ":" + Math.random(), names: names})); } catch(e){}
+    } else {
+      queueSubscribers(names);
+    }
+    return names.length;
+  }
+
+  if(!SCORER_MODE){
+    window.addEventListener("storage", function(e){
+      if(e.key !== "floodlight_sub_alert" || !e.newValue) return;
+      try{
+        var msg = JSON.parse(e.newValue);
+        if(!msg || subSeen[msg.id]) return;
+        subSeen[msg.id] = true;
+        queueSubscribers((msg.names || []).map(cleanSubName).filter(Boolean));
+      } catch(err){}
+    });
+
+    var subInput = $("subNameInput");
+    function showTyped(){
+      if(sendSubscribers(subInput.value)){ subInput.value = ""; closeDrawer(); }
+    }
+    $("subShowBtn").addEventListener("click", showTyped);
+    subInput.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); showTyped(); } });
+    $("subTestBtn").addEventListener("click", function(){
+      var samples = ["Rahul Sharma", "Priya Patel", "Cricket Fan 99", "Arjun Mehta", "Sneha K"];
+      closeDrawer();
+      queueSubscribers([samples[Math.floor(Math.random() * samples.length)]]);
+    });
+  } else {
+    var scSub = $("scSubName");
+    function scSend(){
+      if(sendSubscribers(scSub.value)){
+        scSub.value = "";
+        var btn = $("scSubBtn"); btn.textContent = "Sent ✓";
+        setTimeout(function(){ btn.textContent = "Show"; }, 1200);
+      }
+    }
+    $("scSubBtn").addEventListener("click", scSend);
+    scSub.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); scSend(); } });
+  }
 })();
 </script>
