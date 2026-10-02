@@ -1725,6 +1725,15 @@
     <button class="btn secondary" id="subTestBtn">Test</button>
   </div>
 
+  <label class="field-label" for="seTokenInput" style="margin-top:16px;">Automatic: StreamElements token</label>
+  <p style="margin-top:-4px;">Connect your YouTube channel at <b>streamelements.com</b>, then copy your <b>JWT Token</b> (avatar menu → Channels → your channel → Show secrets) and paste it here. Every new subscriber then pops up by itself, and channel members show as "New member". The token stays only in this browser.</p>
+  <input class="field-input" id="seTokenInput" type="password" placeholder="Paste your StreamElements JWT token" autocomplete="off" spellcheck="false">
+  <div class="btn-row">
+    <button class="btn secondary" id="seConnectBtn">Connect</button>
+    <button class="btn secondary" id="seDisconnectBtn">Disconnect</button>
+  </div>
+  <div class="status-note" id="seNote">Not connected — type names by hand, or connect StreamElements.</div>
+
   <hr class="divider">
 
   <h3>Channel watermark</h3>
@@ -4176,15 +4185,16 @@
   }
 
   function showNextSubscriber(){
-    var name = subQueue.shift();
-    if(!name){ subShowing = false; return; }
+    var item = subQueue.shift();
+    if(!item){ subShowing = false; return; }
+    var name = item.name;
     subShowing = true;
     var wrap = $("subAlertWrap");
     var el = document.createElement("div");
     el.className = "sub-alert";
     var bell = document.createElement("div"); bell.className = "sub-bell"; bell.textContent = "🔔";
     var body = document.createElement("div"); body.className = "sub-body";
-    var kicker = document.createElement("div"); kicker.className = "sub-kicker"; kicker.textContent = "New subscriber";
+    var kicker = document.createElement("div"); kicker.className = "sub-kicker"; kicker.textContent = item.kind === "member" ? "New member" : "New subscriber";
     var nm = document.createElement("div"); nm.className = "sub-name"; nm.textContent = name + " 🎉";
     var thanks = document.createElement("div"); thanks.className = "sub-thanks";
     thanks.textContent = SUB_THANKS[Math.floor(Math.random() * SUB_THANKS.length)] + " ❤️";
@@ -4208,8 +4218,8 @@
     }, SUB_SHOW_MS);
   }
 
-  function queueSubscribers(names){
-    names.forEach(function(n){ subQueue.push(n); });
+  function queueSubscribers(names, kind){
+    names.forEach(function(n){ subQueue.push({name: n, kind: kind || "sub"}); });
     if(!subShowing) showNextSubscriber();
   }
 
@@ -4267,5 +4277,120 @@
     $("scSubBtn").addEventListener("click", scSend);
     scSub.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); scSend(); } });
   }
+
+  /* ---------------- automatic subscriber alerts from StreamElements (Astro WebSocket, topic channel.activities) ---------------- */
+  var SE_URL = "wss://astro.streamelements.com/";
+  var seSocket = null, seWanted = false, seToken = "", seRetry = 0, seTimer = null, seReconnectToken = null, seSeen = {};
+  var SE_MAX_AGE_MS = 15 * 60000;
+
+  function setSeNote(text, cls){
+    var el = $("seNote");
+    el.className = "status-note" + (cls ? " " + cls : "");
+    el.textContent = text;
+  }
+  function seDeepFind(o, re, depth){
+    if(!o || typeof o !== "object" || (depth || 0) > 4) return null;
+    for(var k in o){
+      if(re.test(k) && typeof o[k] === "string" && o[k]) return o[k];
+      var f = seDeepFind(o[k], re, (depth || 0) + 1);
+      if(f) return f;
+    }
+    return null;
+  }
+
+  function handleSeActivity(a){
+    if(!a || (a.type !== "follow" && a.type !== "subscriber")) return;
+    var id = a._id || a.activityId || a.id;
+    if(id){ if(seSeen[id]) return; seSeen[id] = true; }
+    var created = Date.parse(a.createdAt);
+    if(created && Date.now() - created > SE_MAX_AGE_MS) return;
+    var d = a.data || {};
+    var name = cleanSubName(d.displayName || d.username || "") || "A new viewer";
+    // on YouTube a "follow" is a new subscriber and a "subscriber" is a paid channel member
+    queueSubscribers([name], a.type === "subscriber" ? "member" : "sub");
+  }
+
+  function seConnect(){
+    clearTimeout(seTimer);
+    if(!seWanted || !seToken) return;
+    var url = SE_URL + (seReconnectToken ? "?reconnect_token=" + encodeURIComponent(seReconnectToken) : "");
+    var quick = !!seReconnectToken;
+    seReconnectToken = null;
+    var ws;
+    try { ws = new WebSocket(url); }
+    catch(err){ setSeNote("Couldn't open the connection (" + err.message + ").", "err"); return; }
+    seSocket = ws;
+    setSeNote("Connecting to StreamElements…");
+    ws.onopen = function(){
+      ws.send(JSON.stringify({type: "subscribe", data: {topic: "channel.activities", token: seToken, token_type: "jwt"}}));
+    };
+    ws.onmessage = function(ev){
+      var msg;
+      try { msg = JSON.parse(ev.data); } catch(err){ return; }
+      if(!msg || typeof msg !== "object") return;
+      if(msg.type === "response"){
+        var e = msg.error || (msg.data && msg.data.error);
+        if(e){
+          var code = typeof e === "string" ? e : (e.code || e.message || "error");
+          if(/unauthor|token|forbidden|invalid|denied/i.test(code)){
+            seWanted = false;
+            setSeNote("StreamElements rejected the token (" + code + "). Copy the JWT token again from your StreamElements dashboard.", "err");
+            ws.close();
+          } else {
+            setSeNote("StreamElements: " + code, "err");
+          }
+          return;
+        }
+        seRetry = 0;
+        setSeNote("Connected — new subscribers will appear automatically.", "ok");
+        return;
+      }
+      var rt = seDeepFind(msg, /reconnect.?token/i);
+      if(rt) seReconnectToken = rt;
+      if(msg.type === "message" && msg.topic === "channel.activities") handleSeActivity(msg.data);
+    };
+    ws.onclose = function(){
+      if(seSocket !== ws) return;
+      seSocket = null;
+      if(!seWanted) return;
+      var wait = quick || seReconnectToken ? 500 : Math.min(30000, 2000 * Math.pow(2, seRetry));
+      seRetry += 1;
+      setSeNote("Connection lost — reconnecting…", "err");
+      seTimer = setTimeout(seConnect, wait);
+    };
+    ws.onerror = function(){};
+  }
+
+  function seDisconnect(forget){
+    seWanted = false;
+    clearTimeout(seTimer);
+    if(seSocket){ var ws = seSocket; seSocket = null; try { ws.close(); } catch(err){} }
+    if(forget){
+      seToken = "";
+      try { localStorage.removeItem("floodlight_se_token"); } catch(err){}
+      $("seTokenInput").value = "";
+    }
+    setSeNote("Not connected — type names by hand, or connect StreamElements.");
+  }
+
+  if(!SCORER_MODE){
+    var savedSeToken = "";
+    try { savedSeToken = localStorage.getItem("floodlight_se_token") || ""; } catch(err){}
+    $("seConnectBtn").addEventListener("click", function(){
+      var t = $("seTokenInput").value.replace(/^\s*bearer\s+/i, "").replace(/["'\s]/g, "");
+      if(!t){ setSeNote("Paste your StreamElements JWT token first.", "err"); return; }
+      seDisconnect(false);
+      seToken = t; seWanted = true; seRetry = 0;
+      try { localStorage.setItem("floodlight_se_token", t); } catch(err){}
+      seConnect();
+    });
+    $("seDisconnectBtn").addEventListener("click", function(){ seDisconnect(true); });
+    if(savedSeToken){
+      $("seTokenInput").value = savedSeToken;
+      seToken = savedSeToken; seWanted = true;
+      seConnect();
+    }
+  }
+
 })();
 </script>
