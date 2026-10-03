@@ -1904,6 +1904,8 @@
   var activeId = "m1";
   var activeInnings = null;
   var cricketRealMatches = [];
+  // live matches by source: CricAPI's list and the matches only Cricbuzz knows about
+  var cricapiMatches = [], cricapiAt = 0, cbListMatches = [];
   var lastCelebrationKey = null;
 
   function $(id){return document.getElementById(id);}
@@ -3003,7 +3005,7 @@
     if(!cricketKeys.length) return CRICKET_POLL_MS;
     var hitsLeft = totalHitsLeft();
     if(hitsLeft <= 0) return Math.min(Math.max(soonestKeyRetryMs(), CRICKET_POLL_MS), 30 * 60000);
-    return cricketRealMatches.length ? CRICKET_POLL_MS : CRICKET_IDLE_POLL_MS;
+    return cricapiMatches.length ? CRICKET_POLL_MS : CRICKET_IDLE_POLL_MS;
   }
 
   function scheduleNextCricketPoll(key){
@@ -3018,9 +3020,11 @@
 
   function renderRefreshNote(){
     var el = $("cricketRefreshNote");
-    if(!cricketRealMatches.length){ el.textContent = "Demo data — add a CricAPI key in Settings for real matches"; return; }
+    if(!cricketRealMatches.length){ el.textContent = "Demo data — add a CricAPI or Cricbuzz key in Settings for real matches"; return; }
+    var fromCb = cricketRealMatches.filter(function(m){ return m._src === "cricbuzz"; }).length;
+    var src = fromCb === cricketRealMatches.length ? "Cricbuzz" : fromCb ? "CricAPI + Cricbuzz" : "CricAPI";
     var every = cricketRefreshEveryMs ? Math.round(cricketRefreshEveryMs / 60000 * 10) / 10 : null;
-    el.textContent = cricketRealMatches.length + " real live match(es) via CricAPI" + (every ? " · refreshing every " + every + " min" : "");
+    el.textContent = cricketRealMatches.length + " real live match(es) via " + src + (every && !fromCb ? " · refreshing every " + every + " min" : " · refreshing every 1 min");
   }
 
   $("demoBtn").addEventListener("click", function(){
@@ -3197,11 +3201,15 @@
       var stamp = new Date().toLocaleTimeString();
       var quota = CRICKET_PROXY_URL ? "" : (totalHitsLeft() + " hits left today" + (cricketKeys.length > 1 ? " across " + cricketKeys.length + " keys" : ""));
       if(!live.length){
-        cricketRealMatches = [];
+        cricapiMatches = [];
+        cricapiAt = Date.now();
+        rebuildRealMatches(silent);
         note.className = "status-note";
-        note.textContent = "Connected — no cricket matches are live right now (checked " + stamp + "). Showing demo data. " + quota;
+        note.textContent = cricketRealMatches.length
+          ? "CricAPI has no live match right now (checked " + stamp + ") — showing live matches from Cricbuzz. " + quota
+          : "Connected — no cricket matches are live right now (checked " + stamp + "). Showing demo data. " + quota;
       } else {
-        cricketRealMatches = live.map(function(raw){
+        cricapiMatches = live.map(function(raw){
           var nm = mapCricapiMatch(raw);
           var cur = {count:(nm.allInnings||[]).length, overs:parseFloat(nm.score.overs)||0, runs:nm.score.runs};
           var prev = lastGoodCricket[nm.id];
@@ -3212,8 +3220,8 @@
           lastGoodCricket[nm.id] = {count:cur.count, overs:cur.overs, runs:cur.runs, match:nm};
           return nm;
         });
-        cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); });
-        if(!silent || !cricketRealMatches.some(function(m){return m.id===activeId;})) activeId = cricketRealMatches[0].id;
+        cricapiAt = Date.now();
+        rebuildRealMatches(silent);
         cbKickIfMissing();
         note.className = "status-note ok";
         note.textContent = live.length + " live match(es) · updated " + stamp + " · " + quota;
@@ -3242,6 +3250,11 @@
     var note = $("statusNote");
     if(!key){
       note.className = "status-note err";
+      if(cbKeys.length){
+        note.className = "status-note ok";
+        note.textContent = "No CricAPI key — live matches come from Cricbuzz.";
+        return;
+      }
       note.textContent = "Add a CricAPI key first — get a free one at cricketdata.org.";
       return;
     }
@@ -3909,7 +3922,7 @@
   /* ---------------- Cricbuzz (RapidAPI): live batters, bowler, balls, commentary, win % ---------------- */
   var CB_HOST = "cricbuzz-cricket2.p.rapidapi.com";
   var CB_POLL_MS = 60000;
-  var CB_LIST_EVERY_MS = 10 * 60000;   // look up Cricbuzz's id for a new live match at most every 10 min
+  var CB_LIST_EVERY_MS = 5 * 60000;    // re-read Cricbuzz's live list (new matches, other scores) every 5 min
   var CB_STALE_MS = 5 * 60000;         // older player data than this isn't shown
   var cbKeys = [], cbQuota = {}, cbIdFor = {}, cbData = {}, cbSlots = {};
   var cbLiveListAt = 0, cbTimer = null, cbStatus = "";
@@ -3959,19 +3972,85 @@
   async function cbRefreshLiveList(){
     cbLiveListAt = Date.now();
     var j = await cbFetch("/matches/v1/live");
-    var list = [];
+    var entries = [];
     (j.typeMatches || []).forEach(function(t){
       (t.seriesMatches || []).forEach(function(sm){
         var w = sm.seriesAdWrapper;
-        ((w && w.matches) || []).forEach(function(x){ if(x.matchInfo) list.push(x.matchInfo); });
+        ((w && w.matches) || []).forEach(function(x){ if(x.matchInfo) entries.push({info: x.matchInfo, score: x.matchScore}); });
       });
     });
-    cricketRealMatches.forEach(function(m){
+    var list = entries.map(function(e){ return e.info; });
+    cbListMatches = entries.filter(cbIsLive).map(cbToMatch);
+    // Indian fixtures first, otherwise Cricbuzz's own order (internationals first)
+    cbListMatches.sort(function(a, b){ return /india/i.test(b.teamA + b.teamB) - /india/i.test(a.teamA + a.teamB); });
+    cbListMatches.forEach(function(m){ cbIdFor[m.cricapiId] = m._cbId; });
+    cricapiMatches.forEach(function(m){
       var hit = list.filter(function(i){ return i.team1 && i.team2 && cbSameTeams(i.team1.teamName, i.team2.teamName, m.teamA, m.teamB); });
       // several matches between the same sides (e.g. A-team games): prefer the one in progress
       hit.sort(function(a, b){ return (b.state === "In Progress") - (a.state === "In Progress"); });
       if(hit[0]) cbIdFor[m.cricapiId] = hit[0].matchId;
     });
+    rebuildRealMatches(true);
+    publishLiveInfo();
+    if(activeSport === "cricket") renderCricket();
+  }
+
+  function cbIsLive(e){
+    var st = String(e.info.state || "");
+    if(/complete|abandon|no result|cancel/i.test(st)) return false;
+    return !!e.score || /progress|break|stumps|lunch|tea|drinks|rain|delay|toss/i.test(st);
+  }
+
+  // turn a Cricbuzz live-list entry into the same match shape CricAPI matches use
+  function cbToMatch(e){
+    var i = e.info, sc = e.score || {}, t1 = i.team1 || {}, t2 = i.team2 || {};
+    var inns = [];
+    [[sc.team1Score, t1.teamName], [sc.team2Score, t2.teamName]].forEach(function(pair){
+      var ts = pair[0] || {};
+      Object.keys(ts).forEach(function(k){
+        var x = ts[k];
+        if(x && x.inningsId != null) inns.push({id: x.inningsId, r: x.runs || 0, w: x.wickets || 0, o: x.overs != null ? x.overs : 0, inning: pair[1] + " Inning " + (k.replace(/\D/g, "") || "1")});
+      });
+    });
+    inns.sort(function(a, b){ return a.id - b.id; });
+    var m = mapCricapiMatch({
+      id: "cb" + i.matchId, name: t1.teamName + " vs " + t2.teamName, matchType: String(i.matchFormat || "").toLowerCase(),
+      status: i.status || i.state || "Live", teams: [t1.teamName, t2.teamName], teamInfo: [],
+      score: inns.map(function(x){ return {r: x.r, w: x.w, o: x.o, inning: x.inning}; }),
+      matchStarted: true, matchEnded: false, fantasyEnabled: false, hasSquad: false,
+      venue: i.venueInfo ? [i.venueInfo.ground, i.venueInfo.city].filter(Boolean).join(", ") : ""
+    });
+    m.comp = [i.seriesName, i.matchDesc].filter(Boolean).join(" · ") || m.comp;
+    m._cbId = i.matchId;
+    m._src = "cricbuzz";
+    if(i.currBatTeamId === t1.teamId) m.battingNow = t1.teamName;
+    else if(i.currBatTeamId === t2.teamId) m.battingNow = t2.teamName;
+    return m;
+  }
+
+  // live matches = CricAPI's list (while it's fresh) + any match only Cricbuzz has
+  function rebuildRealMatches(silent){
+    var prev = cricketRealMatches.filter(function(m){ return m.id === activeId; })[0];
+    var base = Date.now() - cricapiAt < 4 * 60000 ? cricapiMatches : [];
+    var extra = cbListMatches.filter(function(cm){
+      return !base.some(function(m){ return cbSameTeams(m.teamA, m.teamB, cm.teamA, cm.teamB); });
+    });
+    cricketRealMatches = base.concat(extra);
+    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); });
+    if(!cricketRealMatches.length) return;
+    // keep showing the same fixture if it moves from one source to the other
+    var same = prev && cricketRealMatches.filter(function(m){ return cbSameTeams(m.teamA, m.teamB, prev.teamA, prev.teamB); })[0];
+    if(same) activeId = same.id;
+    else if(!silent || !cricketRealMatches.some(function(m){ return m.id === activeId; })) activeId = cricketRealMatches[0].id;
+  }
+
+  var cbListTimer = null, cbInnSeen = {};
+  async function cbDiscoverTick(){
+    clearTimeout(cbListTimer);
+    if(!cbKeys.length || SCORER_MODE) return;
+    try { await cbRefreshLiveList(); }
+    catch(err){ cbStatus = "Couldn't reach Cricbuzz (" + err.message + ")"; renderCbNote(); }
+    cbListTimer = setTimeout(cbDiscoverTick, cbRequestsLeft() > 0 ? CB_LIST_EVERY_MS : 30 * 60000);
   }
 
   // Cricbuzz over strings look like "0 1 4 W Wd N4 L1 B2"
@@ -4123,6 +4202,10 @@
           var parsed = parseCricbuzzComm(await cbFetch("/mcenter/v1/" + cbId + "/comm"));
           if(parsed){
             cbData[m.cricapiId] = parsed;
+            if(m._src === "cricbuzz" && parsed.innings > (m.allInnings || []).length && cbInnSeen[m.cricapiId] !== parsed.innings){
+              cbInnSeen[m.cricapiId] = parsed.innings;
+              cbDiscoverTick();
+            }
             applyCricbuzz(m, parsed);
             renderCricket();
             cbStatus = "Live players on (updated " + new Date().toLocaleTimeString() + ")";
@@ -4152,7 +4235,11 @@
     cbKeys = parseKeys(raw);
     renderCbNote();
     clearTimeout(cbTimer);
-    if(cbKeys.length) cbTimer = setTimeout(cbTick, 2500);
+    clearTimeout(cbListTimer);
+    if(cbKeys.length){
+      cbListTimer = setTimeout(cbDiscoverTick, 1200);
+      cbTimer = setTimeout(cbTick, 3500);
+    }
   }
 
   var cbShowText = false;
