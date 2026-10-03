@@ -4174,6 +4174,8 @@
     if(cb.score && cb.innings === (m.allInnings || []).length && cb.score.balls >= oversToBalls(m.score.overs)){
       m.score = {runs: cb.score.runs, wkts: cb.score.wkts, overs: Math.floor(cb.score.balls / 6) + "." + (cb.score.balls % 6)};
       m.crr = cb.score.balls ? +(cb.score.runs * 6 / cb.score.balls).toFixed(2) : 0;
+      var lastInn = m.allInnings && m.allInnings[m.allInnings.length - 1];
+      if(lastInn){ lastInn.r = cb.score.runs; lastInn.w = cb.score.wkts; lastInn.o = m.score.overs; }
       var maxOvers = LIMITED_OVERS[m.matchType];
       if(maxOvers && m.target){
         m.ballsRemaining = Math.max(maxOvers * 6 - cb.score.balls, 0);
