@@ -2932,7 +2932,9 @@
   try { savedKey = localStorage.getItem("floodlight_cricapi_key") || ""; } catch(e){}
   if(savedKey){ $("apiKeyInput").value = savedKey; $("statusNote").textContent = "Saved key found — press Fetch to use it."; }
 
-  var CRICKET_POLL_MS = 60000;       // live score refresh: fixed at 1 minute
+  var CRICKET_POLL_MS = 10000;       // live score refresh: every 10 seconds
+  var CRICKET_SLOW_POLL_MS = 60000;  // ...dropping to once a minute when the day's CricAPI requests run low
+  var CRICKET_LOW_HITS = 300;
   var CRICKET_IDLE_POLL_MS = 300000; // nothing live yet: check for a match starting every 5 minutes
   // When set, every visitor reads the shared Cloudflare proxy (proxy/worker.js) instead of calling CricAPI with a key
   var CRICKET_PROXY_URL = "";
@@ -3005,7 +3007,8 @@
     if(!cricketKeys.length) return CRICKET_POLL_MS;
     var hitsLeft = totalHitsLeft();
     if(hitsLeft <= 0) return Math.min(Math.max(soonestKeyRetryMs(), CRICKET_POLL_MS), 30 * 60000);
-    return cricapiMatches.length ? CRICKET_POLL_MS : CRICKET_IDLE_POLL_MS;
+    if(!cricapiMatches.length) return CRICKET_IDLE_POLL_MS;
+    return hitsLeft < CRICKET_LOW_HITS ? CRICKET_SLOW_POLL_MS : CRICKET_POLL_MS;
   }
 
   function scheduleNextCricketPoll(key){
@@ -3023,8 +3026,9 @@
     if(!cricketRealMatches.length){ el.textContent = "Demo data — add a CricAPI or Cricbuzz key in Settings for real matches"; return; }
     var fromCb = cricketRealMatches.filter(function(m){ return m._src === "cricbuzz"; }).length;
     var src = fromCb === cricketRealMatches.length ? "Cricbuzz" : fromCb ? "CricAPI + Cricbuzz" : "CricAPI";
-    var every = cricketRefreshEveryMs ? Math.round(cricketRefreshEveryMs / 60000 * 10) / 10 : null;
-    el.textContent = cricketRealMatches.length + " real live match(es) via " + src + (every && !fromCb ? " · refreshing every " + every + " min" : " · refreshing every 1 min");
+    var ms = !fromCb && cricketRefreshEveryMs ? cricketRefreshEveryMs : CB_POLL_MS;
+    var every = ms < 60000 ? Math.round(ms / 1000) + " sec" : Math.round(ms / 60000 * 10) / 10 + " min";
+    el.textContent = cricketRealMatches.length + " real live match(es) via " + src + " · refreshing every " + every;
   }
 
   $("demoBtn").addEventListener("click", function(){
