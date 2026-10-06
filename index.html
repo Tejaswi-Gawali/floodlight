@@ -4140,7 +4140,19 @@
     // keep showing the same fixture if it moves from one source to the other
     var same = prev && cricketRealMatches.filter(function(m){ return cbSameTeams(m.teamA, m.teamB, prev.teamA, prev.teamB); })[0];
     if(same) activeId = same.id;
-    else if(!silent || !cricketRealMatches.some(function(m){ return m.id === activeId; })) activeId = cricketRealMatches[0].id;
+    else if(!silent || !cricketRealMatches.some(function(m){ return m.id === activeId; })) activeId = pickDefaultMatch().id;
+  }
+
+  // open on the senior India match first; age-group, A-team and women's sides and matches at stumps come after
+  function matchPriority(m){
+    var names = m.teamA + " " + m.teamB, p = 0;
+    if(/\bindia\b/i.test(names)) p += 4;
+    if(/u-?19|u-?23|women|emerging|legends|masters/i.test(names) || /\bA$|\bA\b/.test(names)) p -= 3;
+    if(/stumps|abandon|no result/i.test(m.sub || "")) p -= 2;
+    return p;
+  }
+  function pickDefaultMatch(){
+    return cricketRealMatches.reduce(function(best, m){ return matchPriority(m) > matchPriority(best) ? m : best; }, cricketRealMatches[0]);
   }
 
   var cbListTimer = null, cbInnSeen = {};
