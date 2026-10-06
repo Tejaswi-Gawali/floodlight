@@ -420,6 +420,7 @@
     color:#ffab1f;text-transform:uppercase;transform:skewX(-8deg);
     text-shadow:0 3px 0 #7a3300, 0 0 16px rgba(255,150,20,0.35);
   }
+  .bcast-fielding-label.is-target{font-size:50px;white-space:nowrap;}
   .bowl-line{display:flex;align-items:center;justify-content:center;gap:14px;}
   .rolling-ball{
     width:66px;height:66px;flex-shrink:0;border-radius:50%;
@@ -1182,6 +1183,7 @@
     .bcast-badge-circle{width:76px;height:54px;}
     .bcast-score{font-size:50px;}
     .bcast-fielding-label{font-size:42px;}
+    .bcast-fielding-label.is-target{font-size:36px;}
     .rolling-ball{width:52px;height:52px;}
     .rolling-ball svg{width:38px;height:38px;}
     .card-bat{height:46px;width:16px;}
@@ -1427,7 +1429,7 @@
                   <ellipse cx="36" cy="30" rx="15" ry="9" fill="rgba(255,255,255,0.32)"/>
                 </svg>
               </span>
-              <div class="bcast-fielding-label">Bowling</div>
+              <div class="bcast-fielding-label" id="bcFieldLabel">Bowling</div>
             </div>
             <div class="bcast-overs" hidden>OVERS: <span id="bcOversB">0</span></div>
           </div>
@@ -2422,6 +2424,15 @@
     $("bcWinCodeB").textContent = codeB;
 
     renderInningsStrip(m, codeA, codeB);
+
+    // between innings the other side isn't bowling any more: show the target they'll chase instead
+    var fieldLabel = "Bowling";
+    var maxOv = m.isDemo ? null : ({odi:50, t20:20, t10:10})[m.matchType];
+    var firstDone = !m.isDemo && maxOv && (m.allInnings || []).length === 1 &&
+      (/innings break/i.test(m.sub || "") || +m.score.wkts >= 10 || oversToBalls(m.score.overs) >= maxOv * 6);
+    if(firstDone) fieldLabel = "Target " + ((+m.score.runs || 0) + 1);
+    $("bcFieldLabel").textContent = fieldLabel;
+    $("bcFieldLabel").classList.toggle("is-target", !!firstDone);
 
     var lastBall = m._lastBallValue || ((m.thisOver && m.thisOver.length) ? m.thisOver[m.thisOver.length-1] : "—");
     var lbEl = $("bcLastBall");
