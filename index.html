@@ -4366,7 +4366,7 @@
   /* ---------------- automatic subscriber alerts from StreamElements (Astro WebSocket, topic channel.activities) ---------------- */
   var SE_URL = "wss://astro.streamelements.com/";
   var seSocket = null, seWanted = false, seToken = "", seRetry = 0, seTimer = null, seReconnectToken = null, seSeen = {};
-  var SE_MAX_AGE_MS = 15 * 60000;
+  var SE_MAX_AGE_MS = 15 * 60000, seAnnounced = false;
 
   function setSeNote(text, cls){
     var el = $("seNote");
@@ -4384,15 +4384,15 @@
   }
 
   function handleSeActivity(a){
-    if(!a || (a.type !== "follow" && a.type !== "subscriber")) return;
+    if(!a || !/^(follow|subscriber|sponsor)$/.test(a.type)) return;
     var id = a._id || a.activityId || a.id;
     if(id){ if(seSeen[id]) return; seSeen[id] = true; }
     var created = Date.parse(a.createdAt);
     if(created && Date.now() - created > SE_MAX_AGE_MS) return;
     var d = a.data || {};
     var name = cleanSubName(d.displayName || d.username || "") || "A new viewer";
-    // on YouTube a "follow" is a new subscriber and a "subscriber" is a paid channel member
-    queueSubscribers([name], a.type === "subscriber" ? "member" : "sub");
+    // StreamElements reports a YouTube subscribe as "subscriber" (sometimes "follow"); a paid channel member is "sponsor"
+    queueSubscribers([name], a.type === "sponsor" ? "member" : "sub");
   }
 
   function seConnect(){
@@ -4420,12 +4420,14 @@
           if(/unauthor|token|forbidden|invalid|denied/i.test(code)){
             seWanted = false;
             setSeNote("StreamElements rejected the token (" + code + "). Copy the JWT token again from your StreamElements dashboard.", "err");
+            showToast("Subscriber alerts: token rejected — paste a new one in Settings");
             ws.close();
           } else {
             setSeNote("StreamElements: " + code, "err");
           }
           return;
         }
+        if(seRetry || !seAnnounced){ showToast("Subscriber alerts connected ✓"); seAnnounced = true; }
         seRetry = 0;
         setSeNote("Connected — new subscribers will appear automatically.", "ok");
         return;
