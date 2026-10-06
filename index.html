@@ -4139,13 +4139,21 @@
   }
 
   // live matches = CricAPI's list (while it's fresh) + any match only Cricbuzz has
+  var cbLinked = false;
   function rebuildRealMatches(silent){
     var prev = cricketRealMatches.filter(function(m){ return m.id === activeId; })[0];
     var base = Date.now() - cricapiAt < 4 * 60000 ? cricapiMatches : [];
+    // link CricAPI matches to Cricbuzz's id from the last live list, whichever of the two lists arrived first
+    base.forEach(function(m){
+      if(cbIdFor[m.cricapiId]) return;
+      var hit = cbListMatches.filter(function(cm){ return cbSameTeams(m.teamA, m.teamB, cm.teamA, cm.teamB); })[0];
+      if(hit){ cbIdFor[m.cricapiId] = hit._cbId; cbLinked = true; }
+    });
     var extra = cbListMatches.filter(function(cm){
       return !base.some(function(m){ return cbSameTeams(m.teamA, m.teamB, cm.teamA, cm.teamB); });
     });
     cricketRealMatches = base.concat(extra);
+    if(cbLinked){ cbLinked = false; setTimeout(cbKickIfMissing, 0); }
     cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); holdBestScore(m); catchUpBalls(m); });
     if(!cricketRealMatches.length) return;
     // keep showing the same fixture if it moves from one source to the other
