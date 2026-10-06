@@ -4090,6 +4090,43 @@
       allInnings: (m.allInnings || []).map(function(x){ return {r: x.r, w: x.w, o: x.o, inning: x.inning}; })};
   }
 
+  // The score (CricAPI, every 10 s) can be a ball or two ahead of the ball-by-ball details (Cricbuzz, once a minute).
+  // Work out the newest ball from the score so the last-ball box never shows an older ball,
+  // and fetch Cricbuzz straight away after a wicket.
+  var cbWicketKick = {};
+  function catchUpBalls(m){
+    var cb = cbFreshData(m);
+    if(!m || m.isDemo || !cb || !cb.score || cb.innings !== (m.allInnings || []).length) return;
+    var ahead = oversToBalls(m.score.overs) - cb.score.balls;
+    var wk = (+m.score.wkts || 0) - cb.score.wkts, runs = (+m.score.runs || 0) - cb.score.runs;
+    if(ahead <= 0 && wk <= 0) return;
+    var val = null;
+    if(ahead === 1){
+      if(wk === 1 && runs === 0) val = "W";
+      else if(wk === 0 && [0, 1, 2, 3, 4, 6].indexOf(runs) > -1) val = String(runs);
+    }
+    if(val !== null){
+      var balls = oversToBalls(m.score.overs);
+      m._lastBallValue = val;
+      m._lastBallLabel = Math.floor((balls - 1) / 6) + "." + ((balls - 1) % 6 + 1);
+      var striker = (m.batters || []).filter(function(b){ return b.strike; })[0];
+      if(striker) m._lastFacedBatter = striker.name;
+      m._commText = undefined;
+      if(cb.score.balls % 6 === 0){ m.prevOver = cb.thisOver.length ? cb.thisOver.slice() : m.prevOver; m.thisOver = []; }
+      m.thisOver = m.thisOver.concat([val]);
+      if(balls % 6 === 0){ m.prevOver = m.thisOver.slice(); m.thisOver = []; }
+    } else {
+      // more than one ball behind, or an extra we can't read from the score: show the plain BALL/OVER state rather than an old ball
+      m._lastBallValue = "—";
+      m._lastBallLabel = null;
+    }
+    if(wk > 0 && cbWicketKick[m.cricapiId] !== m.score.wkts){
+      cbWicketKick[m.cricapiId] = m.score.wkts;
+      clearTimeout(cbTimer);
+      cbTimer = setTimeout(cbTick, 1500);
+    }
+  }
+
   // live matches = CricAPI's list (while it's fresh) + any match only Cricbuzz has
   function rebuildRealMatches(silent){
     var prev = cricketRealMatches.filter(function(m){ return m.id === activeId; })[0];
@@ -4098,7 +4135,7 @@
       return !base.some(function(m){ return cbSameTeams(m.teamA, m.teamB, cm.teamA, cm.teamB); });
     });
     cricketRealMatches = base.concat(extra);
-    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); holdBestScore(m); });
+    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); holdBestScore(m); catchUpBalls(m); });
     if(!cricketRealMatches.length) return;
     // keep showing the same fixture if it moves from one source to the other
     var same = prev && cricketRealMatches.filter(function(m){ return cbSameTeams(m.teamA, m.teamB, prev.teamA, prev.teamB); })[0];
@@ -4281,6 +4318,7 @@
             }
             applyCricbuzz(m, parsed);
             holdBestScore(m);
+            catchUpBalls(m);
             renderCricket();
             cbStatus = "Live players on (updated " + new Date().toLocaleTimeString() + ")";
           }
