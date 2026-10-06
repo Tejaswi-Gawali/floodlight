@@ -3182,25 +3182,69 @@
     }
   }
 
+  // one CricAPI request, moving on to the next key when one is used up or rejected
+  async function cricapiGet(path){
+    var tried = [], lastErr = "no API key";
+    while(true){
+      var useKey = CRICKET_PROXY_URL ? null : pickCricketKey(tried);
+      if(!CRICKET_PROXY_URL && !useKey) throw new Error(tried.length ? lastErr + (cricketKeys.length > 1 ? " — all " + cricketKeys.length + " keys are used up or failing" : "") : "all keys are used up for today");
+      var res = await fetch(CRICKET_PROXY_URL || ("https://api.cricapi.com/v1/" + path + (path.indexOf("?") > -1 ? "&" : "?") + "apikey=" + encodeURIComponent(useKey)));
+      var body = await res.json();
+      recordKeyInfo(useKey, body.info);
+      if(body.status === "success") return body;
+      lastErr = body.message || body.reason || "API rejected the request";
+      if(!useKey) throw new Error(lastErr);
+      // quota used up or key rejected: park this key and try the next one straight away
+      markKeyExhausted(useKey, lastErr);
+      tried.push(useKey);
+    }
+  }
+
+  // CricAPI's cache servers sometimes return an older snapshot; never let an innings go backwards
+  function mapCricapiGuarded(raw){
+    var nm = mapCricapiMatch(raw);
+    var cur = {count:(nm.allInnings||[]).length, overs:parseFloat(nm.score.overs)||0, runs:nm.score.runs};
+    var prev = lastGoodCricket[nm.id];
+    if(prev && (cur.count < prev.count || (cur.count === prev.count && (cur.overs < prev.overs || (cur.overs === prev.overs && cur.runs < prev.runs))))){
+      return prev.match;
+    }
+    lastGoodCricket[nm.id] = {count:cur.count, overs:cur.overs, runs:cur.runs, match:nm};
+    return nm;
+  }
+
+  // the match list (currentMatches) is cached by CricAPI and runs a few balls behind; match_info isn't,
+  // so between list refreshes the match on screen is read straight from match_info
+  var CRICAPI_LIST_EVERY_MS = 60000, cricapiListAt = 0;
+  async function fetchActiveMatchInfo(){
+    var m = findActiveMatch();
+    if(!m || m.isDemo || m._src === "cricbuzz" || !m.cricapiId) return false;
+    var idx = -1;
+    cricapiMatches.forEach(function(x, i){ if(x.cricapiId === m.cricapiId) idx = i; });
+    if(idx < 0) return false;
+    var body = await cricapiGet("match_info?id=" + encodeURIComponent(m.cricapiId));
+    var raw = body.data;
+    if(!raw || !raw.id || raw.matchEnded) return false;
+    cricapiMatches[idx] = mapCricapiGuarded(raw);
+    cricapiAt = Date.now();
+    rebuildRealMatches(true);
+    var note = $("statusNote");
+    note.className = "status-note ok";
+    note.textContent = cricapiMatches.length + " live match(es) · updated " + new Date().toLocaleTimeString() + " · " + totalHitsLeft() + " hits left today";
+    publishLiveInfo();
+    if(activeSport==="cricket") renderCricket();
+    return true;
+  }
+
   async function fetchCricketLive(key, opts){
     var silent = opts && opts.silent;
     var note = $("statusNote");
     if(!silent){ note.className = "status-note"; note.textContent = "Contacting cricketdata.org…"; }
     try{
-      var json = null, tried = [], lastErr = "no API key";
-      while(!json){
-        var useKey = CRICKET_PROXY_URL ? null : pickCricketKey(tried);
-        if(!CRICKET_PROXY_URL && !useKey) throw new Error(tried.length ? lastErr + (cricketKeys.length > 1 ? " — all " + cricketKeys.length + " keys are used up or failing" : "") : "all keys are used up for today");
-        var res = await fetch(CRICKET_PROXY_URL || ("https://api.cricapi.com/v1/currentMatches?apikey=" + encodeURIComponent(useKey) + "&offset=0"));
-        var body = await res.json();
-        recordKeyInfo(useKey, body.info);
-        if(body.status === "success"){ json = body; break; }
-        lastErr = body.message || body.reason || "API rejected the request";
-        if(!useKey) throw new Error(lastErr);
-        // quota used up or key rejected: park this key and try the next one straight away
-        markKeyExhausted(useKey, lastErr);
-        tried.push(useKey);
+      if(silent && !CRICKET_PROXY_URL && Date.now() - cricapiListAt < CRICAPI_LIST_EVERY_MS){
+        try { if(await fetchActiveMatchInfo()) return true; } catch(e){}
       }
+      var json = await cricapiGet("currentMatches?offset=0");
+      cricapiListAt = Date.now();
       var live = (json.data || []).filter(function(m){ return m.matchStarted && !m.matchEnded; });
       var stamp = new Date().toLocaleTimeString();
       var quota = CRICKET_PROXY_URL ? "" : (totalHitsLeft() + " hits left today" + (cricketKeys.length > 1 ? " across " + cricketKeys.length + " keys" : ""));
@@ -3213,17 +3257,7 @@
           ? "CricAPI has no live match right now (checked " + stamp + ") — showing live matches from Cricbuzz. " + quota
           : "Connected — no cricket matches are live right now (checked " + stamp + "). Showing demo data. " + quota;
       } else {
-        cricapiMatches = live.map(function(raw){
-          var nm = mapCricapiMatch(raw);
-          var cur = {count:(nm.allInnings||[]).length, overs:parseFloat(nm.score.overs)||0, runs:nm.score.runs};
-          var prev = lastGoodCricket[nm.id];
-          // CricAPI's cache servers sometimes return an older snapshot; never let an innings go backwards
-          if(prev && (cur.count < prev.count || (cur.count === prev.count && (cur.overs < prev.overs || (cur.overs === prev.overs && cur.runs < prev.runs))))){
-            return prev.match;
-          }
-          lastGoodCricket[nm.id] = {count:cur.count, overs:cur.overs, runs:cur.runs, match:nm};
-          return nm;
-        });
+        cricapiMatches = live.map(mapCricapiGuarded);
         cricapiAt = Date.now();
         rebuildRealMatches(silent);
         cbKickIfMissing();
