@@ -4013,7 +4013,7 @@
       var ts = pair[0] || {};
       Object.keys(ts).forEach(function(k){
         var x = ts[k];
-        if(x && x.inningsId != null) inns.push({id: x.inningsId, r: x.runs || 0, w: x.wickets || 0, o: x.overs != null ? x.overs : 0, inning: pair[1] + " Inning " + (k.replace(/\D/g, "") || "1")});
+        if(x && x.inningsId != null) inns.push({id: x.inningsId, r: x.runs || 0, w: x.wickets || 0, o: x.overs != null ? (function(b){ return Math.floor(b / 6) + (b % 6 ? "." + b % 6 : ""); })(oversToBalls(x.overs)) : 0, inning: pair[1] + " Inning " + (k.replace(/\D/g, "") || "1")});
       });
     });
     inns.sort(function(a, b){ return a.id - b.id; });
@@ -4032,6 +4032,30 @@
     return m;
   }
 
+  // the furthest score seen for each fixture; an older snapshot from either source never replaces it
+  var bestScore = {};
+  function scoreAhead(a, b){
+    if(a.inn !== b.inn) return a.inn > b.inn;
+    if(a.balls !== b.balls) return a.balls > b.balls;
+    if(a.runs !== b.runs) return a.runs > b.runs;
+    return a.wkts > b.wkts;
+  }
+  function holdBestScore(m){
+    if(!m || m.isDemo || !m.score) return;
+    var key = [cbTeamKey(m.teamA), cbTeamKey(m.teamB)].sort().join("|");
+    var now = {inn: (m.allInnings || []).length, balls: oversToBalls(m.score.overs), runs: +m.score.runs || 0, wkts: +m.score.wkts || 0};
+    var b = bestScore[key];
+    if(b && scoreAhead(b.rank, now) && Date.now() - b.at < 20 * 60000){
+      m.score = {runs: b.score.runs, wkts: b.score.wkts, overs: b.score.overs};
+      m.crr = b.crr; m.rrr = b.rrr; m.target = b.target; m.ballsRemaining = b.ballsRemaining; m.battingNow = b.battingNow;
+      m.allInnings = b.allInnings.map(function(x){ return {r: x.r, w: x.w, o: x.o, inning: x.inning}; });
+      return;
+    }
+    bestScore[key] = {rank: now, at: Date.now(), score: {runs: m.score.runs, wkts: m.score.wkts, overs: m.score.overs},
+      crr: m.crr, rrr: m.rrr, target: m.target, ballsRemaining: m.ballsRemaining, battingNow: m.battingNow,
+      allInnings: (m.allInnings || []).map(function(x){ return {r: x.r, w: x.w, o: x.o, inning: x.inning}; })};
+  }
+
   // live matches = CricAPI's list (while it's fresh) + any match only Cricbuzz has
   function rebuildRealMatches(silent){
     var prev = cricketRealMatches.filter(function(m){ return m.id === activeId; })[0];
@@ -4040,7 +4064,7 @@
       return !base.some(function(m){ return cbSameTeams(m.teamA, m.teamB, cm.teamA, cm.teamB); });
     });
     cricketRealMatches = base.concat(extra);
-    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); });
+    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); holdBestScore(m); });
     if(!cricketRealMatches.length) return;
     // keep showing the same fixture if it moves from one source to the other
     var same = prev && cricketRealMatches.filter(function(m){ return cbSameTeams(m.teamA, m.teamB, prev.teamA, prev.teamB); })[0];
@@ -4174,6 +4198,15 @@
         m._commText = cbShowText ? cb.comm.text : undefined;
       }
     }
+    // Cricbuzz has already moved on to the next innings while CricAPI hasn't: start it here too (one-innings-a-side formats)
+    var innNow = (m.allInnings || []).length, maxOv = LIMITED_OVERS[m.matchType];
+    if(cb.score && maxOv && innNow === 1 && cb.innings === 2){
+      var chasing = m.battingNow === m.teamA ? m.teamB : m.teamA;
+      m.allInnings = m.allInnings.concat([{r: 0, w: 0, o: 0, inning: chasing + " Inning 1"}]);
+      m.battingNow = chasing;
+      m.target = (m.allInnings[0].r || 0) + 1;
+      m.score = {runs: 0, wkts: 0, overs: "0"};
+    }
     // Cricbuzz is usually a ball or two ahead of CricAPI: use its total when it's the same innings and not behind
     if(cb.score && cb.innings === (m.allInnings || []).length && cb.score.balls >= oversToBalls(m.score.overs)){
       m.score = {runs: cb.score.runs, wkts: cb.score.wkts, overs: Math.floor(cb.score.balls / 6) + "." + (cb.score.balls % 6)};
@@ -4213,6 +4246,7 @@
               cbDiscoverTick();
             }
             applyCricbuzz(m, parsed);
+            holdBestScore(m);
             renderCricket();
             cbStatus = "Live players on (updated " + new Date().toLocaleTimeString() + ")";
           }
