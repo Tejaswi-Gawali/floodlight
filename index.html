@@ -415,6 +415,10 @@
     background:rgba(4,8,30,0.6);border-radius:4px;padding:0 14px;margin-top:4px;line-height:1.35;
   }
   .bcast-overs span{color:var(--six);display:inline-block;transform:skewX(-8deg);}
+  .bcast-pills{display:flex;flex-wrap:wrap;justify-content:center;gap:0 8px;}
+  .bcast-target{background:rgba(255,171,31,0.92);color:#3a1600;}
+  .bcast-target span{color:#3a1600;}
+  .bcast-lastball.lb-word.lb-break{font-size:34px;line-height:1;white-space:nowrap;}
   .bcast-fielding-label{
     font-family:"Teko",sans-serif;font-size:58px;font-weight:700;line-height:1;letter-spacing:0.02em;
     color:#ffab1f;text-transform:uppercase;transform:skewX(-8deg);
@@ -1382,7 +1386,10 @@
           <div class="bcast-team-inner">
             <div class="bcast-team-name" id="bcTeamNameA">—</div>
             <div class="bcast-score" id="bcScoreA">0-0</div>
-            <div class="bcast-overs">OVERS: <span id="bcOversA">0.0</span></div>
+            <div class="bcast-pills">
+              <div class="bcast-overs">OVERS: <span id="bcOversA">0.0</span></div>
+              <div class="bcast-overs bcast-target" id="bcTargetA" hidden>TARGET: <span id="bcTargetVal">0</span></div>
+            </div>
           </div>
         </div>
         <div class="bcast-lastball">
@@ -2331,7 +2338,7 @@
   };
   // flags and our own badges fill their frame; team logos are shown whole
   function isFlagImage(url){
-    return url.indexOf("flagcdn.com") !== -1 || url.indexOf("data:image/svg") === 0 || url.indexOf("blogger.googleusercontent.com") !== -1;
+    return url.indexOf("flagcdn.com") !== -1 || url.indexOf("data:image/svg") === 0 || url.indexOf("blogger.googleusercontent.com") !== -1 || url.indexOf("upload.wikimedia.org") !== -1;
   }
 
   function countryFlagUrl(name){
@@ -2375,7 +2382,12 @@
     return "data:image/svg+xml," + encodeURIComponent(svg);
   }
 
+  var REGION_FLAG_IMAGES = {
+    "west indies": "https://upload.wikimedia.org/wikipedia/commons/1/18/WestIndiesCricketFlagPre1999.svg"
+  };
   function teamBadgeUrl(m, team){
+    var rkey = String(team||"").toLowerCase().replace(/\s*\b(women|men|u-?19|a)\b\s*$/i, "").trim();
+    if(REGION_FLAG_IMAGES[rkey]) return REGION_FLAG_IMAGES[rkey];
     var region = regionBadgeUrl(team);
     if(region) return region;
     var info = teamInfoFor(m, team);
@@ -2433,10 +2445,20 @@
     if(firstDone) fieldLabel = "Target " + ((+m.score.runs || 0) + 1);
     $("bcFieldLabel").textContent = fieldLabel;
     $("bcFieldLabel").classList.toggle("is-target", !!firstDone);
+    var chasing = !m.isDemo && maxOv && m.target && (m.allInnings || []).length >= 2;
+    $("bcTargetA").hidden = !chasing;
+    if(chasing) $("bcTargetVal").textContent = m.target;
 
     var lastBall = m._lastBallValue || ((m.thisOver && m.thisOver.length) ? m.thisOver[m.thisOver.length-1] : "—");
     var lbEl = $("bcLastBall");
-    if(lastBall === "—"){
+    lbEl.parentNode.classList.toggle("lb-break", !!firstDone);
+    if(firstDone){
+      lastBall = "—";
+      lbEl.dataset.value = "INNINGS BREAK";
+      pulseText(lbEl, "INNINGS BREAK");
+      lbEl.parentNode.classList.add("lb-word");
+      lbEl.parentNode.classList.remove("lb-over");
+    } else if(lastBall === "—"){
       // no ball-by-ball feed: show the broadcast idle states instead of a dash
       var overDone = oversToBalls(m.score.overs) > 0 && oversToBalls(m.score.overs) % 6 === 0;
       lbEl.dataset.value = overDone ? "OVER" : "BALL";
@@ -3067,7 +3089,18 @@
     return (parseInt(s[0],10)||0)*6 + (parseInt(s[1],10)||0);
   }
 
+  // CricAPI sometimes gets the format wrong (a T20I labelled "odi"); the match name is more reliable
+  function detectFormat(name, type){
+    var n = String(name || "");
+    if(/\bT20I?s?\b|twenty20/i.test(n)) return "t20";
+    if(/\bT10\b/i.test(n)) return "t10";
+    if(/\bODIs?\b|one[- ]day/i.test(n)) return "odi";
+    if(/\bTests?\b|first[- ]class/i.test(n)) return "test";
+    return String(type || "").toLowerCase();
+  }
+
   function mapCricapiMatch(m){
+    m = Object.assign({}, m, {matchType: detectFormat(m.name, m.matchType)});
     var scores = m.score || [];
     var last = scores[scores.length-1] || {r:0,w:0,o:0,inning:""};
     var teams = m.teams || [m.team1 || "Team A", m.team2 || "Team B"];
@@ -3138,8 +3171,20 @@
         scorecardFetchState[m.cricapiId] = "unavailable";
         return;
       }
+      var scorecards = parseCricapiScorecard(json.data, m);
+      if(!json.data.matchEnded) trackCricapiBalls(m.cricapiId, json.data);
+      scorecardCache[m.cricapiId] = {data: scorecards, at: Date.now()};
+      m.scorecards = scorecards;
+      scorecardFetchState[m.cricapiId] = "idle";
+      if(activeSport==="cricket" && activeId===m.id) renderScorecard(m);
+    } catch(err){
+      scorecardFetchState[m.cricapiId] = "unavailable";
+    }
+  }
+
+  function parseCricapiScorecard(data, m){
       var scorecards = {};
-      json.data.scorecard.forEach(function(inn){
+      (data.scorecard || []).forEach(function(inn){
         var teamName = matchTeamFromInning(inn.inning, m.inningsOrder);
         var batting = (inn.batting || []).map(function(b){
           return {
@@ -3160,13 +3205,7 @@
           batting: batting, bowling: bowling
         };
       });
-      scorecardCache[m.cricapiId] = {data: scorecards, at: Date.now()};
-      m.scorecards = scorecards;
-      scorecardFetchState[m.cricapiId] = "idle";
-      if(activeSport==="cricket" && activeId===m.id) renderScorecard(m);
-    } catch(err){
-      scorecardFetchState[m.cricapiId] = "unavailable";
-    }
+      return scorecards;
   }
 
   async function fetchMatchSquad(m){
@@ -3194,7 +3233,7 @@
   }
 
   // one CricAPI request, moving on to the next key when one is used up or rejected
-  async function cricapiGet(path){
+  async function cricapiGet(path, soft){
     var tried = [], lastErr = "no API key";
     while(true){
       var useKey = CRICKET_PROXY_URL ? null : pickCricketKey(tried);
@@ -3205,6 +3244,7 @@
       if(body.status === "success") return body;
       lastErr = body.message || body.reason || "API rejected the request";
       if(!useKey) throw new Error(lastErr);
+      if(soft && !/hit|limit|block|key|quota|plan/i.test(lastErr)) throw new Error(lastErr);
       // quota used up or key rejected: park this key and try the next one straight away
       markKeyExhausted(useKey, lastErr);
       tried.push(useKey);
@@ -3225,17 +3265,28 @@
 
   // the match list (currentMatches) is cached by CricAPI and runs a few balls behind; match_info isn't,
   // so between list refreshes the match on screen is read straight from match_info
-  var CRICAPI_LIST_EVERY_MS = 60000, cricapiListAt = 0;
+  var CRICAPI_LIST_EVERY_MS = 60000, cricapiListAt = 0, scorecardMissing = {};
   async function fetchActiveMatchInfo(){
     var m = findActiveMatch();
     if(!m || m.isDemo || m._src === "cricbuzz" || !m.cricapiId) return false;
     var idx = -1;
     cricapiMatches.forEach(function(x, i){ if(x.cricapiId === m.cricapiId) idx = i; });
     if(idx < 0) return false;
-    var body = await cricapiGet("match_info?id=" + encodeURIComponent(m.cricapiId));
+    var body = null;
+    if(!scorecardMissing[m.cricapiId]){
+      try { body = await cricapiGet("match_scorecard?id=" + encodeURIComponent(m.cricapiId), true); }
+      catch(e){ if(!/hit|limit|block|key|quota|plan/i.test(e.message)) scorecardMissing[m.cricapiId] = true; else throw e; }
+    }
+    if(!body) body = await cricapiGet("match_info?id=" + encodeURIComponent(m.cricapiId));
     var raw = body.data;
     if(!raw || !raw.id || raw.matchEnded) return false;
-    cricapiMatches[idx] = mapCricapiGuarded(raw);
+    var nm = mapCricapiGuarded(raw);
+    if(raw.scorecard && raw.scorecard.length){
+      nm.scorecards = parseCricapiScorecard(raw, nm);
+      scorecardCache[m.cricapiId] = {data: nm.scorecards, at: Date.now()};
+      trackCricapiBalls(m.cricapiId, raw);
+    }
+    cricapiMatches[idx] = nm;
     cricapiAt = Date.now();
     rebuildRealMatches(true);
     var note = $("statusNote");
@@ -3556,7 +3607,7 @@
       return '<div><div class="ix-team-head ' + (idx === 0 ? '' : 'bowl') + '">' + ixBadge(m, t) + '<span class="ix-team-name">' + esc(t) + '</span></div>' +
         '<div class="ix-list' + (list.length > 12 ? ' two-col' : '') + '">' + players + '</div></div>';
     }).join("");
-    return ixHead("neutral", m.squads ? "Squads" : "Playing XI", m.teamA + " vs " + m.teamB, "", "") + '<div class="ix-squads">' + cols + '</div>';
+    return ixHead("neutral", m._xi || !m.squads ? "Playing XI" : "Squads", m.teamA + " vs " + m.teamB, "", "") + '<div class="ix-squads">' + cols + '</div>';
   }
 
   function breakInnings(m){
@@ -4042,6 +4093,7 @@
     rebuildRealMatches(true);
     publishLiveInfo();
     if(activeSport === "cricket") renderCricket();
+    cbKickIfMissing();   // the match on screen may have just been linked: fetch its details now, not in a minute
   }
 
   function cbIsLive(e){
@@ -4154,7 +4206,7 @@
     });
     cricketRealMatches = base.concat(extra);
     if(cbLinked){ cbLinked = false; setTimeout(cbKickIfMissing, 0); }
-    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); holdBestScore(m); catchUpBalls(m); });
+    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); holdBestScore(m); if(!applyCricapiLive(m)) catchUpBalls(m); applyCbTeams(m); });
     if(!cricketRealMatches.length) return;
     // keep showing the same fixture if it moves from one source to the other
     var same = prev && cricketRealMatches.filter(function(m){ return cbSameTeams(m.teamA, m.teamB, prev.teamA, prev.teamB); })[0];
@@ -4349,7 +4401,9 @@
             }
             applyCricbuzz(m, parsed);
             holdBestScore(m);
-            catchUpBalls(m);
+            if(!applyCricapiLive(m)) catchUpBalls(m);
+            cbFetchTeams(m, cbId);
+            applyCbTeams(m);
             renderCricket();
             cbStatus = "Live players on (updated " + new Date().toLocaleTimeString() + ")";
           }
@@ -4507,7 +4561,7 @@
   /* ---------------- automatic subscriber alerts from StreamElements (Astro WebSocket, topic channel.activities) ---------------- */
   var SE_URL = "wss://astro.streamelements.com/";
   var seSocket = null, seWanted = false, seToken = "", seRetry = 0, seTimer = null, seReconnectToken = null, seSeen = {};
-  var SE_MAX_AGE_MS = 15 * 60000, seAnnounced = false;
+  var SE_MAX_AGE_MS = 2 * 3600000, seAnnounced = false;
 
   function setSeNote(text, cls){
     var el = $("seNote");
@@ -4618,6 +4672,237 @@
       seToken = savedSeToken; seWanted = true;
       seConnect();
     }
+  }
+
+  /* ---------------- ball-by-ball from CricAPI scorecard snapshots (every 10 s) ---------------- */
+  // Each snapshot gives every batter's runs/balls/4s/6s and every bowler's figures. Comparing two snapshots tells us
+  // which balls happened in between (a four and a six, a wicket, a wide...), who is batting and who is bowling.
+  var cricapiLive = {};
+  function cbNameKey(n){ return String(n || "").toLowerCase().replace(/[^a-z]/g, ""); }
+
+  function scorecardSnap(raw){
+    var score = raw.score || [], last = score[score.length - 1] || {};
+    var sc = raw.scorecard || [], inn = sc[sc.length - 1] || {};
+    var bat = [], bowl = [];
+    (inn.batting || []).forEach(function(b){
+      var n = b.batsman && b.batsman.name;
+      if(!n) return;
+      var txt = String(b["dismissal-text"] || "");
+      bat.push({name: n, r: +b.r || 0, b: +b.b || 0, f: +b["4s"] || 0, s: +b["6s"] || 0,
+        out: !!b.dismissal && !/not out|batting/i.test(txt)});
+    });
+    (inn.bowling || []).forEach(function(b){
+      var n = b.bowler && b.bowler.name;
+      if(!n) return;
+      bowl.push({name: n, o: b.o, balls: oversToBalls(b.o), m: +b.m || 0, r: +b.r || 0, w: +b.w || 0,
+        eco: +b.eco || 0, wd: +b.wd || 0, nb: +b.nb || 0});
+    });
+    return {inn: score.length, balls: oversToBalls(last.o), runs: +last.r || 0, wkts: +last.w || 0, bat: bat, bowl: bowl};
+  }
+  function byName(list){ var o = {}; list.forEach(function(x){ o[x.name] = x; }); return o; }
+
+  function trackCricapiBalls(id, raw){
+    var s = scorecardSnap(raw);
+    if(!s.bat.length) return;
+    var L = cricapiLive[id];
+    if(!L || L.inn !== s.inn){
+      L = cricapiLive[id] = {inn: s.inn, seq: [], snap: null, striker: null, bowler: null, box: [], boxAt: 0};
+    }
+    var p = L.snap;
+    var notOut = s.bat.filter(function(b){ return !b.out; });
+    L.batters = notOut.slice(-2);
+    if(p && (s.balls < p.balls || (s.balls === p.balls && s.runs < p.runs))) return;   // older snapshot: ignore
+    var pb = p ? byName(p.bat) : {}, pw = p ? byName(p.bowl) : {};
+
+    // who bowled since the last snapshot
+    var moved = s.bowl.filter(function(b){ var o = pw[b.name]; return !o || b.balls > o.balls || b.r > o.r || b.wd > o.wd || b.nb > o.nb; });
+    if(moved.length) L.bowler = moved[moved.length - 1].name;
+    else if(!L.bowler){
+      var part = s.bowl.filter(function(b){ return b.balls % 6; });
+      L.bowler = (part.length ? part[part.length - 1] : s.bowl[s.bowl.length - 1] || {}).name || null;
+    }
+
+    if(p){
+      var adv = s.balls - p.balls;
+      var outs = s.bat.filter(function(b){ return b.out && !(pb[b.name] && pb[b.name].out); }).length;
+      var fours = 0, sixes = 0, batRuns = 0, faced = [];
+      s.bat.forEach(function(b){
+        var o = pb[b.name] || {r:0, b:0, f:0, s:0};
+        fours += Math.max(b.f - o.f, 0); sixes += Math.max(b.s - o.s, 0); batRuns += Math.max(b.r - o.r, 0);
+        if(b.b > o.b) faced.push({name: b.name, runs: b.r - o.r});
+      });
+      var wd = 0, nb = 0;
+      s.bowl.forEach(function(b){ var o = pw[b.name] || {wd:0, nb:0}; wd += Math.max(b.wd - o.wd, 0); nb += Math.max(b.nb - o.nb, 0); });
+      var extras = Math.max((s.runs - p.runs) - batRuns, 0);
+      var toks = [];
+      if(adv === 0 && (wd || nb || s.runs > p.runs)){
+        // only extras (a wide or a no-ball) since the last look
+        if(wd) toks.push({tok: extras > 1 ? (extras - 1) + "wd" : "wd", legal: false});
+        else if(nb) toks.push({tok: (batRuns ? batRuns : "") + "nb", legal: false});
+      } else if(adv === 1){
+        var t;
+        if(outs) t = "W";
+        else if(wd) { toks.push({tok: "wd", legal: false}); t = String(batRuns); }
+        else if(nb) { toks.push({tok: (batRuns ? batRuns : "") + "nb", legal: false}); t = "0"; }
+        else if(extras && !batRuns) t = extras + "lb";
+        else t = String(batRuns);
+        toks.push({tok: t, legal: true});
+      } else if(adv > 1){
+        // several balls at once: we know the wickets and boundaries, not their exact order
+        var known = [];
+        for(var i = 0; i < outs; i++) known.push("W");
+        for(i = 0; i < fours; i++) known.push("4");
+        for(i = 0; i < sixes; i++) known.push("6");
+        var rest = Math.max(adv - known.length, 0);
+        var restRuns = Math.max(batRuns - fours * 4 - sixes * 6, 0);
+        for(i = 0; i < rest; i++) toks.push({tok: rest === restRuns ? "1" : restRuns === 0 ? "0" : "•", legal: true});
+        known.forEach(function(k){ toks.push({tok: k, legal: true}); });
+      }
+      var at = p.balls;
+      toks.forEach(function(t){
+        if(t.legal){ at += 1; L.seq.push({tok: t.tok, legal: true, idx: at}); }
+        else L.seq.push({tok: t.tok, legal: false, after: at});
+      });
+      // the box shows the new balls one after another (a four and then a six both get their moment)
+      var shown = toks.map(function(t){ return t.tok; }).filter(function(t){ return t !== "•"; });
+      if(adv > 1) shown = shown.filter(function(t){ return /^(W|4|6)$/.test(t); });
+      if(toks.length){
+        L.box = shown.length ? shown : ["—"];
+        L.boxAt = Date.now();
+        L.boxBalls = s.balls;
+      }
+      // strike: the batter who faced the last ball, swapped after an odd run or at the end of the over
+      if(adv >= 1 && faced.length === 1){
+        var facedName = faced[0].name;
+        var otherB = L.batters.filter(function(b){ return b.name !== facedName; })[0];
+        var onStrike = facedName;
+        if(adv === 1 && otherB && toks.length && /^[13]$/.test(toks[toks.length - 1].tok)) onStrike = otherB.name;   // ran an odd number
+        if(s.balls % 6 === 0 && otherB) onStrike = onStrike === facedName ? otherB.name : facedName;              // ends change after the over
+        L.striker = onStrike;
+      }
+      if(outs){
+        var gone = L.striker && !L.batters.some(function(b){ return b.name === L.striker; });
+        if(gone) L.striker = (L.batters[L.batters.length - 1] || {}).name || null;
+      }
+    }
+    if(!L.striker || !L.batters.some(function(b){ return b.name === L.striker; })) L.striker = (L.batters[0] || {}).name || null;
+    L.snap = s;
+    L.balls = s.balls; L.runs = s.runs; L.wkts = s.wkts;
+    L.bowl = byName(s.bowl);
+    if(L.seq.length > 60) L.seq = L.seq.slice(-60);
+  }
+
+  var boxTimer = null;
+  var BOX_STEP_MS = 2600;
+  function applyCricapiLive(m){
+    var L = m && !m.isDemo && cricapiLive[m.cricapiId];
+    if(!L || L.inn !== (m.allInnings || []).length || !L.batters || !L.batters.length) return false;
+    var cb = cbFreshData(m);
+    var cbBalls = cb && cb.score && cb.innings === L.inn ? cb.score.balls : -1;
+    if(cbBalls > L.balls) return false;          // Cricbuzz is further on: its details win
+
+    // batters: keep each one in the same card, figures from the newest snapshot
+    var cur = L.batters.map(function(b){
+      return {name: b.name, stat: b.r + " (" + b.b + ")", fours: b.f, six: b.s, sr: b.b ? +(b.r * 100 / b.b).toFixed(1) : 0};
+    });
+    var useCbStrike = cb && cbBalls === L.balls && cb.striker;
+    var strikeName = useCbStrike ? cb.striker.name : L.striker;
+    var prevOrder = (m.batters || []).map(function(b){ return cbNameKey(b.name); });
+    var cards = [null, null];
+    cur.forEach(function(b){ var i = prevOrder.indexOf(cbNameKey(b.name)); if(i > -1 && i < 2 && !cards[i]) cards[i] = b; });
+    cur.forEach(function(b){ if(cards.indexOf(b) === -1){ var free = cards[0] ? 1 : 0; if(!cards[free]) cards[free] = b; } });
+    m.batters = cards.map(function(b){
+      if(!b) return {name:"—", stat:"0 (0)", strike:false};
+      b.strike = cbNameKey(b.name) === cbNameKey(strikeName);
+      return b;
+    });
+    if(L.bowler && L.bowl[L.bowler]){
+      var w = L.bowl[L.bowler];
+      m.bowler = {name: w.name, stat: w.o + "-" + w.m + "-" + w.r + "-" + w.w, econ: w.eco};
+    }
+    if(cbBalls === L.balls) return true;          // same ball: Cricbuzz's own last ball and overs stay
+
+    // recent overs: Cricbuzz's exact balls, then the balls we worked out since
+    function cbOver(n){
+      if(cbBalls < 0) return null;
+      var done = Math.floor(cbBalls / 6), inOver = cbBalls % 6;
+      if(n === done) return (cb.prevOver || []).slice();
+      if(n === done + 1 && inOver) return (cb.thisOver || []).slice();
+      return null;
+    }
+    function overOf(e){ return e.legal ? Math.ceil(e.idx / 6) : Math.floor(e.after / 6) + 1; }
+    function overTokens(n){
+      var base = cbOver(n);
+      var from = base ? cbBalls : (n - 1) * 6;
+      var extra = L.seq.filter(function(e){ return overOf(e) === n && (e.legal ? e.idx > from : e.after >= from); })
+        .map(function(e){ return e.tok; });
+      return (base || []).concat(extra);
+    }
+    var doneOvers = Math.floor(L.balls / 6);
+    m.thisOver = L.balls % 6 ? overTokens(doneOvers + 1) : (L.seq.some(function(e){ return !e.legal && e.after === L.balls; }) ? overTokens(doneOvers + 1) : []);
+    m.prevOver = overTokens(doneOvers);
+    m._manualOverNo = doneOvers;
+
+    // last-ball box: step through the new balls
+    if(L.box && L.box.length && L.boxBalls === L.balls){
+      var step = Math.min(Math.floor((Date.now() - L.boxAt) / BOX_STEP_MS), L.box.length - 1);
+      m._lastBallValue = L.box[step];
+      if(step < L.box.length - 1 && !boxTimer){
+        boxTimer = setTimeout(function(){
+          boxTimer = null;
+          var am = findActiveMatch();
+          if(am && applyCricapiLive(am) && activeSport === "cricket") renderCricket();
+        }, BOX_STEP_MS + 50);
+      }
+    } else {
+      m._lastBallValue = "—";
+    }
+    m._lastBallLabel = L.balls ? Math.floor((L.balls - 1) / 6) + "." + ((L.balls - 1) % 6 + 1) : null;
+    m._lastBowler = L.bowler;
+    m._lastFacedBatter = L.striker;
+    m._commText = undefined;
+    if(L.wkts > (cb && cb.score ? cb.score.wkts : L.wkts) && cbWicketKick[m.cricapiId] !== L.wkts){
+      cbWicketKick[m.cricapiId] = L.wkts;
+      clearTimeout(cbTimer);
+      cbTimer = setTimeout(cbTick, 1500);
+    }
+    return true;
+  }
+
+  /* ---------------- playing XI from Cricbuzz (one request per match) ---------------- */
+  var cbTeamsCache = {}, cbTeamsLoading = {};
+  async function cbFetchTeams(m, cbId){
+    var c = cbTeamsCache[cbId];
+    if(cbTeamsLoading[cbId] || (c && (c.full || Date.now() - c.at < 15 * 60000))) return;
+    cbTeamsLoading[cbId] = true;
+    try{
+      var j = await cbFetch("/mcenter/v1/" + cbId + "/teams");
+      var squads = {}, full = true;
+      ["team1", "team2"].forEach(function(k){
+        var t = j && j[k];
+        if(!t || !t.team) return;
+        var name = cbSameTeams(t.team.teamname, "", m.teamA, "") ? m.teamA : cbSameTeams(t.team.teamname, "", m.teamB, "") ? m.teamB
+          : matchTeamFromInning(t.team.teamname, [m.teamA, m.teamB]);
+        var xi = (t.players || []).filter(function(g){ return /playing\s*xi/i.test(g.category || ""); })[0];
+        var list = ((xi && xi.player) || []).map(function(pl){
+          var tag = pl.captain && pl.keeper ? "c & wk" : pl.captain ? "c" : pl.keeper ? "wk" : "";
+          return {name: pl.name, role: pl.role || "", tag: tag};
+        });
+        if(list.length < 11) full = false;
+        if(list.length) squads[name] = list;
+      });
+      cbTeamsCache[cbId] = {at: Date.now(), squads: squads, full: full && Object.keys(squads).length === 2};
+      applyCbTeams(m);
+    } catch(err){
+      cbTeamsCache[cbId] = {at: Date.now(), squads: {}, full: false};
+    } finally {
+      cbTeamsLoading[cbId] = false;
+    }
+  }
+  function applyCbTeams(m){
+    var cbId = m && cbIdFor[m.cricapiId];
+    var c = cbId && cbTeamsCache[cbId];
+    if(c && Object.keys(c.squads).length){ m.squads = c.squads; m._xi = true; }
   }
 
 })();
