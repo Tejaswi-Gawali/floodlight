@@ -2540,7 +2540,7 @@
     milestone: ["#ffd54a", "#b46bff", "#ffffff", "#ff8a00"]
   };
   function queueFx(o){
-    if(SCORER_MODE || !$("boundaryFx")) return;
+    if(SCORER_MODE || !$("boundaryFx") || prematchVisible()) return;
     fxQueue.push(o);
     if(fxQueue.length > 4) fxQueue.shift();
     pumpFx();
@@ -2613,6 +2613,7 @@
   }
 
   function triggerCelebration(type){
+    if(prematchVisible()) return;   // the countdown covers the board: nothing behind it should fire
     lastCelebrationAt = Date.now();
     showBoundaryFx(type);
     eqBoost(type);
@@ -4114,6 +4115,7 @@
   }
 
   function runScheduledBreak(){
+    if(prematchVisible()){ scheduleBreak(30000); return; }
     // don't cover a boundary or wicket celebration; try again shortly
     if(Date.now() - lastCelebrationAt < 5000){ scheduleBreak(5000); return; }
     for(var k = 0; k < BREAK_TYPES.length; k++){
@@ -5436,7 +5438,7 @@
   /* ---------- lower-third banners (end of over, partnerships, new bowler) ---------- */
   var bannerQ = [], bannerBusy = false;
   function queueBanner(b){
-    if(SCORER_MODE) return;
+    if(SCORER_MODE || prematchVisible()) return;
     bannerQ.push(b);
     if(bannerQ.length > 4) bannerQ.shift();
     if(!bannerBusy) nextBanner();
@@ -5737,6 +5739,11 @@
   function showPrematch(){
     if(!pmCfg || !pmCfg.t1 || !pmCfg.t2){ showToast("Set up the pre-match screen in Settings first (teams and start time)."); return false; }
     $("prematch").hidden = false;
+    fxQueue.length = 0;
+    $("boundaryFx").classList.remove("show");
+    bannerQ.length = 0;
+    $("infoBanner").classList.remove("show");
+    hideBreak();
     renderPrematch();
     clearInterval(pmTick);
     pmTick = setInterval(renderPrematch, 1000);
