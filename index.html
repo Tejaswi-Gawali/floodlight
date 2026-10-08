@@ -1439,6 +1439,7 @@
               <div class="bcast-fielding-label" id="bcFieldLabel">Bowling</div>
             </div>
             <div class="bcast-overs" hidden>OVERS: <span id="bcOversB">0</span></div>
+            <div class="bcast-overs bcast-target" id="bcTargetB" hidden>TARGET SET: <span id="bcTargetValB">0</span></div>
           </div>
           <div class="bcast-badge-circle" id="bcBadgeB"><span id="bcBadgeBInitials">—</span></div>
         </div>
@@ -2447,7 +2448,8 @@
     $("bcFieldLabel").classList.toggle("is-target", !!firstDone);
     var chasing = !m.isDemo && maxOv && m.target && (m.allInnings || []).length >= 2;
     $("bcTargetA").hidden = !chasing;
-    if(chasing) $("bcTargetVal").textContent = m.target;
+    $("bcTargetB").hidden = !chasing;
+    if(chasing){ $("bcTargetVal").textContent = m.target; $("bcTargetValB").textContent = m.target; }
 
     var lastBall = m._lastBallValue || ((m.thisOver && m.thisOver.length) ? m.thisOver[m.thisOver.length-1] : "—");
     var lbEl = $("bcLastBall");
