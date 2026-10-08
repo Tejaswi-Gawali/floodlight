@@ -785,6 +785,122 @@
     .bfx-stumps .st, .bfx-stumps .bail{animation:none !important;}
   }
 
+
+  /* ---------- stream extras: banners, reminder, poll, pre-match, pressure, chart, result ---------- */
+  .boundary-fx.milestone{--fx1:#ffd54a;--fx2:#a24bff;--fx3:#fff6d6;}
+  .boundary-fx.milestone.show{animation:bfx-fade 3.3s ease-out forwards;}
+  .boundary-fx.milestone .bfx-num{font-size:clamp(150px, 40vh, 360px);}
+  .boundary-fx.milestone .bfx-name{background:#a24bff;color:#fff;}
+
+  .info-banner{
+    position:fixed;left:16px;bottom:70px;z-index:64;pointer-events:none;max-width:min(600px,62vw);
+    background:linear-gradient(100deg,#0b1f5c,#15379a);border-left:6px solid #ffab1f;border-radius:6px 30px 30px 6px;
+    padding:8px 28px 9px 16px;color:#fff;box-shadow:0 10px 26px rgba(0,0,0,0.5);
+    transform:translateX(-130%);opacity:0;transition:transform .45s cubic-bezier(.2,1.2,.3,1), opacity .3s;
+  }
+  .info-banner.show{transform:none;opacity:1;}
+  .info-banner.pship{border-left-color:#4fc3ff;}
+  .info-banner.bowl{border-left-color:#ff5c5c;}
+  .ib-kicker{font-family:"Teko",sans-serif;font-size:18px;letter-spacing:.12em;color:#ffab1f;line-height:1;}
+  .info-banner.pship .ib-kicker{color:#4fc3ff;}
+  .info-banner.bowl .ib-kicker{color:#ff8a8a;}
+  .ib-main{font-family:"Teko",sans-serif;font-weight:700;font-size:34px;line-height:1.05;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ib-sub{font-family:"Teko",sans-serif;font-size:21px;line-height:1.1;color:#dbe6ff;}
+  .ib-sub:empty{display:none;}
+
+  .like-remind{
+    position:fixed;bottom:70px;right:16px;z-index:64;pointer-events:none;display:flex;align-items:center;gap:12px;
+    padding:8px 20px;border-radius:40px;background:linear-gradient(100deg,#b8121a,#ff3d3d);color:#fff;
+    box-shadow:0 10px 26px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.6);
+    transform:translateY(160%);opacity:0;transition:transform .5s cubic-bezier(.2,1.3,.3,1), opacity .3s;
+  }
+  .like-remind.show{transform:none;opacity:1;}
+  .lr-icon{font-size:32px;line-height:1;display:inline-block;}
+  .like-remind.show .lr-thumb{animation:lr-thumb 0.9s ease-in-out 0.4s 3;}
+  .like-remind.show .lr-bell{animation:lr-bell 0.8s ease-in-out 0.6s 3;transform-origin:50% 10%;}
+  @keyframes lr-thumb{50%{transform:translateY(-6px) rotate(-12deg) scale(1.15);}}
+  @keyframes lr-bell{20%{transform:rotate(18deg);} 40%{transform:rotate(-16deg);} 60%{transform:rotate(10deg);} 80%{transform:rotate(-6deg);}}
+  .lr-text{font-family:"Teko",sans-serif;font-size:28px;line-height:1;letter-spacing:.05em;display:flex;flex-direction:column;}
+  .lr-text small{font-size:17px;opacity:.92;letter-spacing:.04em;}
+
+  .poll-box{
+    position:fixed;right:16px;top:34%;z-index:64;width:min(390px,44vw);pointer-events:none;
+    background:rgba(8,14,40,.95);border:2px solid #ffab1f;border-radius:14px;padding:12px 14px;color:#fff;
+    font-family:"Teko",sans-serif;box-shadow:0 12px 30px rgba(0,0,0,.55);animation:poll-in .45s cubic-bezier(.2,1.3,.3,1);
+  }
+  .poll-box[hidden]{display:none;}
+  @keyframes poll-in{from{opacity:0;transform:translateY(30px);}}
+  .pl-title{font-size:30px;font-weight:700;line-height:1;color:#ffd54a;letter-spacing:.04em;}
+  .pl-row{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:8px;margin-top:8px;}
+  .pl-flag{width:36px;height:24px;border-radius:3px;object-fit:cover;background:#223;display:block;}
+  .pl-bar{position:relative;height:32px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;}
+  .pl-fill{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,#1f5bff,#4fc3ff);transition:width .5s;}
+  .pl-row.b .pl-fill{background:linear-gradient(90deg,#c4161c,#ff6b4a);}
+  .pl-name{position:relative;line-height:32px;padding-left:10px;font-size:22px;font-weight:600;white-space:nowrap;}
+  .pl-pct{font-size:28px;font-weight:700;min-width:62px;text-align:right;}
+  .pl-foot{margin-top:8px;font-size:19px;color:#cfd8ff;line-height:1.1;}
+  .poll-box.closed{border-color:#4fc3ff;}
+  .poll-box.closed .pl-row.win .pl-pct{color:#ffd54a;}
+
+  .prematch{
+    position:fixed;inset:0;z-index:62;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4vh;
+    background:radial-gradient(circle at 50% 40%, #16348f 0, #081233 60%, #030714 100%);color:#fff;
+    font-family:"Teko",sans-serif;text-align:center;overflow:hidden;
+  }
+  .prematch[hidden]{display:none;}
+  .prematch::before{content:"";position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg, rgba(255,255,255,.04) 0 6deg, transparent 6deg 18deg);animation:pm-spin 80s linear infinite;}
+  @keyframes pm-spin{to{transform:rotate(360deg);}}
+  .pm-kicker{position:relative;font-size:clamp(20px,3.4vh,36px);letter-spacing:.2em;color:#ffab1f;}
+  .pm-title{position:relative;font-size:clamp(24px,4.6vh,50px);font-weight:600;line-height:1;}
+  .pm-teams{position:relative;display:flex;align-items:center;gap:5vw;margin:2vh 0;}
+  .pm-team{display:flex;flex-direction:column;align-items:center;gap:1.2vh;}
+  .pm-flag{width:clamp(110px,22vh,240px);aspect-ratio:3/2;border-radius:10px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.6), 0 0 0 4px rgba(255,255,255,.85);background:#1b2a5a;display:flex;align-items:center;justify-content:center;}
+  .pm-flag img{width:100%;height:100%;object-fit:cover;}
+  .pm-flag svg{width:70%;height:70%;}
+  .pm-name{font-size:clamp(28px,5.6vh,60px);font-weight:700;text-transform:uppercase;line-height:1;}
+  .pm-vs{font-size:clamp(40px,9vh,100px);font-weight:700;color:#ffab1f;font-style:italic;}
+  .pm-count{position:relative;font-size:clamp(60px,14vh,160px);font-weight:700;line-height:.9;letter-spacing:.04em;text-shadow:0 0 30px rgba(79,195,255,.6);font-variant-numeric:tabular-nums;}
+  .pm-when{position:relative;font-size:clamp(20px,3.6vh,38px);color:#cfe0ff;}
+  .pm-live{position:relative;display:inline-block;padding:2px 20px;border-radius:30px;background:#e0303a;font-size:clamp(20px,3.4vh,34px);letter-spacing:.1em;animation:pm-pulse 1.4s ease-in-out infinite;}
+  @keyframes pm-pulse{50%{opacity:.55;}}
+
+  .bcast-pressure{display:flex;align-items:center;gap:12px;padding:4px 14px;margin-top:6px;border-radius:8px;background:rgba(8,14,40,.78);border:1px solid rgba(255,255,255,.12);font-family:"Teko",sans-serif;color:#fff;}
+  .bcast-pressure[hidden]{display:none;}
+  .pr-label{font-size:18px;letter-spacing:.1em;color:#cfd8ff;white-space:nowrap;}
+  .pr-track{flex:1;height:12px;border-radius:8px;background:rgba(255,255,255,.1);overflow:hidden;}
+  .pr-fill{height:100%;width:0;border-radius:8px;transition:width .6s, background-color .6s;}
+  .pr-val{font-size:20px;font-weight:600;white-space:nowrap;}
+
+  .credit-warn{margin:0 0 14px;padding:10px 12px;border-radius:8px;background:rgba(224,48,58,.15);border:1px solid rgba(224,48,58,.6);color:#ffb3b3;font-size:13px;line-height:1.45;}
+  .credit-warn[hidden]{display:none;}
+  #settingsBtn.has-warn{position:relative;}
+  #settingsBtn.has-warn::after{content:"";position:absolute;top:3px;right:3px;width:10px;height:10px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 0 2px #0b1220;}
+  .pm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  .ix-chart{display:flex;align-items:flex-end;gap:4px;height:min(40vh,300px);padding:26px 4px 0;border-bottom:2px solid rgba(255,255,255,.3);margin-bottom:22px;}
+  .ch-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative;}
+  .ch-bar{width:100%;max-width:38px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#ffd54a,#ff8a00);position:relative;min-height:3px;}
+  .ch-bar.empty{background:rgba(255,255,255,.12);}
+  .ch-val{font-family:"Teko",sans-serif;font-size:18px;line-height:1;margin-bottom:3px;color:#fff;}
+  .ch-wk{position:absolute;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:#ff3b3b;border:2px solid #fff;}
+  .ch-n{font-family:"Teko",sans-serif;font-size:15px;color:#cfd8ff;line-height:1;position:absolute;bottom:-19px;}
+  .ch-foot{font-family:"Teko",sans-serif;font-size:22px;color:#e4ebff;display:flex;gap:22px;flex-wrap:wrap;justify-content:center;}
+  .ch-foot b{color:#ffd54a;font-weight:600;}
+  .rs-headline{font-family:"Teko",sans-serif;font-weight:700;font-size:clamp(30px,5vh,52px);color:#ffd54a;text-align:center;line-height:1.05;margin-bottom:10px;text-transform:uppercase;}
+  .rs-stars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+  .rs-star{display:flex;flex-direction:column;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,213,74,.4);font-family:"Teko",sans-serif;}
+  .rs-tag{font-size:16px;letter-spacing:.12em;color:#ffab1f;}
+  .rs-name{font-size:28px;font-weight:600;line-height:1.1;text-transform:uppercase;text-align:center;}
+  .rs-fig{font-size:24px;color:#fff;}
+  .sc-ctrls{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .sc-credits{font-size:12px;margin-top:6px;color:var(--muted);}
+  .sc-credits.low{color:#ff8a8a;}
+  body.scorer-mode .info-banner, body.scorer-mode .like-remind, body.scorer-mode .poll-box, body.scorer-mode .prematch{display:none !important;}
+  @media (prefers-reduced-motion: reduce){
+    .info-banner, .like-remind{transition:none;}
+    .like-remind.show .lr-thumb, .like-remind.show .lr-bell, .pm-live, .prematch::before, .poll-box{animation:none;}
+  }
+
   /* boundary / wicket celebration overlay */
   .bcast-stadium.shake{animation:stadium-shake 0.9s ease-in-out;}
   @keyframes stadium-shake{
@@ -1554,6 +1670,11 @@
         </div>
         <div class="bcast-seg wide ctx" id="bcContextMsg"></div>
       </div>
+      <div class="bcast-pressure" id="bcPressure" hidden>
+        <span class="pr-label">CHASE PRESSURE</span>
+        <div class="pr-track"><div class="pr-fill" id="bcPressureFill"></div></div>
+        <span class="pr-val" id="bcPressureVal">—</span>
+      </div>
 
       <div class="bcast-seg-row navy" id="bcLastWktRow">
         <div class="bcast-seg">Last Wkt: <span id="bcLastWkt"></span></div>
@@ -1722,6 +1843,16 @@
       </div>
       <div class="sc-section-title">Subscriber shout-out <span>shows on the stream</span></div>
       <div class="sc-row"><input class="field-input sc-sub" id="scSubName" placeholder="New subscriber's name, then Enter" maxlength="60" autocomplete="off"><button class="btn secondary sc-small" id="scSubBtn">Show</button></div>
+      <div class="sc-section-title">Stream controls <span>show on the stream</span></div>
+      <div class="sc-ctrls">
+        <button class="btn secondary sc-small" data-cmd="poll">Start / end poll</button>
+        <button class="btn secondary sc-small" data-cmd="chart">Run-rate chart</button>
+        <button class="btn secondary sc-small" data-cmd="summary">Match summary</button>
+        <button class="btn secondary sc-small" data-cmd="result">Result screen</button>
+        <button class="btn secondary sc-small" data-cmd="prematch">Pre-match screen</button>
+        <button class="btn secondary sc-small" data-cmd="remind">Like reminder</button>
+      </div>
+      <div class="sc-credits" id="scCredits"></div>
       <div class="sc-keys">Keys: <b>0–4, 6</b> runs · <b>W</b> wicket · <b>E</b> wide · <b>N</b> no-ball · <b>L</b> leg-bye · <b>S</b> swap strike · <b>U</b> undo</div>
     </div>
   </div>
@@ -1793,6 +1924,7 @@
 <div class="drawer" id="drawer" role="dialog" aria-label="Data source settings">
   <button class="close-drawer" id="closeDrawer" aria-label="Close">✕</button>
 
+  <div class="credit-warn" id="creditWarn" hidden></div>
   <h3>Football data</h3>
   <p>Live football scores are already real — fetched directly from TheSportsDB's free public API, no signup needed. Refreshes automatically every 45 seconds while you're on the Football tab.</p>
 
@@ -1800,7 +1932,7 @@
 
   <h3>Cricket data</h3>
   <p>Browsers can't read Google's scorecards or scrape scoreboard sites directly (CORS blocks it), but cricket data APIs work fine. Sign up free at <b>cricketdata.org/signup.aspx</b> (formerly CricAPI, no card needed) to get a key.</p>
-  <p style="margin-top:-8px;">Free tier is capped at 100 requests/day, so once connected the live score refreshes every minute (about 100 minutes of live play per key per day — paste several keys to cover a full match). When nothing is live it only checks every 5 minutes. Faster refresh needs a paid plan (see below).</p>
+  <p style="margin-top:-8px;">The match on screen refreshes every 10 seconds (about 420 requests an hour, so the 2,000/day plan covers roughly 4½ hours of live play). When fewer than 300 requests are left it slows to once a minute, and when nothing is live it only checks every 5 minutes. A red dot on ⚙ means credits are running low.</p>
   <label class="field-label" for="apiKeyInput">CricAPI / Cricket Data key(s)</label>
   <textarea class="field-input key-input" id="apiKeyInput" rows="3" placeholder="One key, or several — one per line or separated by commas" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn" id="goLiveBtn">Fetch live cricket match</button>
@@ -1869,11 +2001,58 @@
 
   <hr class="divider">
 
+  <h3>Stream extras</h3>
+  <p>Automatic: 50 / 100 and five-wicket pop-ups, partnership and end-of-over banners, the new bowler's figures (and how they've done against the batters), a chase-pressure bar, and a result screen when the match ends. Keys: <b>R</b> run-rate chart, <b>E</b> result, <b>P</b> start / end the chat poll, <b>C</b> pre-match countdown, <b>Esc</b> close.</p>
+  <label class="field-label" for="likeSelect">Like &amp; subscribe reminder</label>
+  <select class="field-input" id="likeSelect">
+    <option value="0">Off</option>
+    <option value="10">Every 10 minutes</option>
+    <option value="15">Every 15 minutes</option>
+    <option value="20">Every 20 minutes</option>
+  </select>
+  <div class="btn-row">
+    <button class="btn secondary" id="likeNowBtn">Reminder now</button>
+    <button class="btn secondary" id="chartNowBtn">Run-rate chart now</button>
+    <button class="btn secondary" id="resultNowBtn">Result now</button>
+  </div>
+
+  <label class="field-label" for="pollMinutes" style="margin-top:16px;">"Who will win?" chat poll</label>
+  <p style="margin-top:-4px;">Viewers type <b>1</b> or <b>2</b> (or the team name) in YouTube chat. Needs StreamElements connected above. One vote per viewer — if they change their mind, the latest vote counts.</p>
+  <select class="field-input" id="pollMinutes">
+    <option value="2">Runs for 2 minutes</option>
+    <option value="3" selected>Runs for 3 minutes</option>
+    <option value="5">Runs for 5 minutes</option>
+    <option value="10">Runs for 10 minutes</option>
+  </select>
+  <div class="btn-row">
+    <button class="btn secondary" id="pollStartBtn">Start poll</button>
+    <button class="btn secondary" id="pollStopBtn">End poll</button>
+    <button class="btn secondary" id="pollSimBtn">Test with fake votes</button>
+  </div>
+  <div class="status-note" id="pollNote">Chat votes need StreamElements connected.</div>
+
+  <label class="field-label" for="pmSelect" style="margin-top:16px;">Pre-match countdown screen</label>
+  <select class="field-input" id="pmSelect"><option value="">Pick an upcoming match (from CricAPI)…</option></select>
+  <div class="pm-grid">
+    <input class="field-input" id="pmTeam1" placeholder="Team 1, e.g. India" maxlength="40" autocomplete="off">
+    <input class="field-input" id="pmTeam2" placeholder="Team 2, e.g. Australia" maxlength="40" autocomplete="off">
+  </div>
+  <input class="field-input" id="pmTime" type="datetime-local">
+  <input class="field-input" id="pmTitle" placeholder="Title, e.g. 2nd T20I · Australia tour of India" maxlength="80" autocomplete="off">
+  <input class="field-input" id="pmVenue" placeholder="Venue (optional)" maxlength="80" autocomplete="off">
+  <div class="btn-row">
+    <button class="btn secondary" id="pmShowBtn">Show countdown</button>
+    <button class="btn secondary" id="pmHideBtn">Hide</button>
+  </div>
+
+  <hr class="divider">
+
   <h3>Preview celebration</h3>
   <p>Fire the boundary/wicket celebration on demand — same effect that plays automatically when live data shows a four, six, or wicket.</p>
   <button class="btn" id="previewFourBtn" style="margin-bottom:8px;">Preview FOUR</button>
   <button class="btn" id="previewSixBtn" style="margin-bottom:8px;background:var(--six);color:#241a00;">Preview SIX</button>
   <button class="btn secondary" id="previewWicketBtn">Preview WICKET</button>
+  <button class="btn secondary" id="previewFiftyBtn" style="margin-top:8px;">Preview FIFTY</button>
 
   <hr class="divider">
 
@@ -1902,6 +2081,14 @@
   <div class="bfx-name" id="bfxName"></div>
   <div class="bfx-how" id="bfxHow"></div>
 </div>
+<div class="info-banner" id="infoBanner" aria-live="polite"><div class="ib-kicker" id="ibKicker"></div><div class="ib-main" id="ibMain"></div><div class="ib-sub" id="ibSub"></div></div>
+<div class="like-remind" id="likeRemind" aria-hidden="true">
+  <span class="lr-icon lr-thumb">👍</span>
+  <div class="lr-text"><span><b>LIKE</b> &amp; <b>SUBSCRIBE</b></span><small id="likeChannel">for every ball, live</small></div>
+  <span class="lr-icon lr-bell">🔔</span>
+</div>
+<div class="poll-box" id="pollBox" hidden></div>
+<div class="prematch" id="prematch" hidden></div>
 
 <div class="interstitial" id="interstitial" hidden aria-live="polite">
   <div class="ix-panel">
@@ -2344,27 +2531,39 @@
   }
 
   var lastCelebrationAt = 0;
-  // giant 4 / 6 across the whole screen, with the batter's name
-  var bfxTimer = null;
-  function showBoundaryFx(type){
+  // full-screen effects (4, 6, wicket, milestones) play one after another, never on top of each other
+  var bfxTimer = null, fxQueue = [], fxBusyUntil = 0, fxPumpTimer = null;
+  var FX_COLORS = {
+    six: ["#ffd54a", "#ff8a00", "#fff3c4", "#ff4d4d"],
+    four: ["#4fc3ff", "#1f5bff", "#e3f6ff", "#7cffb2"],
+    wicket: ["#ff4d4d", "#ffffff", "#ffd54a", "#c40000"],
+    milestone: ["#ffd54a", "#b46bff", "#ffffff", "#ff8a00"]
+  };
+  function queueFx(o){
+    if(SCORER_MODE || !$("boundaryFx")) return;
+    fxQueue.push(o);
+    if(fxQueue.length > 4) fxQueue.shift();
+    pumpFx();
+  }
+  function pumpFx(){
+    clearTimeout(fxPumpTimer);
+    var wait = fxBusyUntil - Date.now();
+    if(wait > 0){ fxPumpTimer = setTimeout(pumpFx, wait + 20); return; }
+    var o = fxQueue.shift();
+    if(!o) return;
+    renderFx(o);
+    fxBusyUntil = Date.now() + o.dur + 120;
+    if(fxQueue.length) fxPumpTimer = setTimeout(pumpFx, o.dur + 140);
+  }
+  function fxBusy(){ return Date.now() < fxBusyUntil || fxQueue.length > 0; }
+  function renderFx(o){
     var fx = $("boundaryFx");
-    if(!fx || SCORER_MODE || (type !== "four" && type !== "six" && type !== "wicket")) return;
-    var m = findActiveMatch();
-    if(type === "wicket"){
-      var out = wicketDetails(m);
-      $("bfxNum").textContent = "OUT!";
-      $("bfxWord").textContent = "WICKET";
-      $("bfxName").textContent = out ? out.name + (out.r != null ? "  " + out.r + " (" + out.b + ")" : "") : "";
-      $("bfxHow").textContent = out && out.how ? out.how : "";
-    } else {
-      $("bfxNum").textContent = type === "six" ? "6" : "4";
-      $("bfxWord").textContent = type === "six" ? "SIX!" : "FOUR!";
-      var who = m && (m._lastFacedBatter || ((m.batters || []).filter(function(b){ return b.strike; })[0] || {}).name);
-      $("bfxName").textContent = who && who !== "—" ? who : "";
-      $("bfxHow").textContent = "";
-    }
+    $("bfxNum").textContent = o.num;
+    $("bfxWord").textContent = o.word;
+    $("bfxName").textContent = o.name || "";
+    $("bfxHow").textContent = o.how || "";
     fx.querySelectorAll(".bfx-spark").forEach(function(el){ el.remove(); });
-    var colors = type === "six" ? ["#ffd54a", "#ff8a00", "#fff3c4", "#ff4d4d"] : type === "four" ? ["#4fc3ff", "#1f5bff", "#e3f6ff", "#7cffb2"] : ["#ff4d4d", "#ffffff", "#ffd54a", "#c40000"];
+    var colors = FX_COLORS[o.cls] || FX_COLORS.six;
     for(var i = 0; i < 46; i++){
       var sp = document.createElement("span");
       sp.className = "bfx-spark";
@@ -2375,11 +2574,27 @@
       sp.style.setProperty("--d", (Math.random() * 0.35).toFixed(2) + "s");
       fx.appendChild(sp);
     }
-    fx.className = "boundary-fx " + type;
+    fx.className = "boundary-fx " + o.cls;
     void fx.offsetWidth;
     fx.classList.add("show");
     clearTimeout(bfxTimer);
-    bfxTimer = setTimeout(function(){ fx.classList.remove("show"); }, type === "wicket" ? 3100 : 2600);
+    bfxTimer = setTimeout(function(){ fx.classList.remove("show"); }, o.dur);
+  }
+
+  // giant 4 / 6 / OUT! across the whole screen, with the batter's name
+  function showBoundaryFx(type){
+    if(type !== "four" && type !== "six" && type !== "wicket") return;
+    var m = findActiveMatch();
+    if(type === "wicket"){
+      var out = wicketDetails(m);
+      queueFx({cls: "wicket", num: "OUT!", word: "WICKET", dur: 3100,
+        name: out ? out.name + (out.r != null ? "  " + out.r + " (" + out.b + ")" : "") : "",
+        how: out && out.how ? out.how : ""});
+      return;
+    }
+    var who = m && (m._lastFacedBatter || ((m.batters || []).filter(function(b){ return b.strike; })[0] || {}).name);
+    queueFx({cls: type, num: type === "six" ? "6" : "4", word: type === "six" ? "SIX!" : "FOUR!", dur: 2600,
+      name: who && who !== "—" ? who : "", how: ""});
   }
 
   // the batter who just got out: from the newest scorecard, else Cricbuzz's "last wicket" line
@@ -2389,6 +2604,7 @@
     var t = String(m.lastWicketText || "");
     var x = t.match(/^(.+?)\s+((?:c\s*(?:&|and)\s*b|c|b|lbw|st|run out|hit wicket|retired)\b.*?)\s+(\d+)\s*\((\d+)\)/i);
     if(x) return {name: x[1], how: x[2], r: +x[3], b: +x[4]};
+    if(m.lastWicket && m.lastWicket.name) return {name: m.lastWicket.name, r: m.lastWicket.runs, b: m.lastWicket.balls};
     if(m.isDemo){
       var b0 = (m.batters || [])[0];
       return b0 && b0.name !== "—" ? {name: b0.name} : null;
@@ -2785,6 +3001,7 @@
     renderPoints(m);
     if(!m.isDemo){ fetchMatchScorecard(m); fetchMatchSquad(m); }
     renderRefreshNote();
+    streamExtras(m);
   }
 
   /* ---------------- Demo ball-by-ball simulator (keeps the demo matches feeling live) ---------------- */
@@ -3205,7 +3422,7 @@
     if(!cricketKeys.length) return CRICKET_POLL_MS;
     var hitsLeft = totalHitsLeft();
     if(hitsLeft <= 0) return Math.min(Math.max(soonestKeyRetryMs(), CRICKET_POLL_MS), 30 * 60000);
-    if(!cricapiMatches.length) return CRICKET_IDLE_POLL_MS;
+    if(!cricapiMatches.some(function(x){ return !x.finished; })) return CRICKET_IDLE_POLL_MS;
     return hitsLeft < CRICKET_LOW_HITS ? CRICKET_SLOW_POLL_MS : CRICKET_POLL_MS;
   }
 
@@ -3291,7 +3508,7 @@
       batters:[{name:"—",stat:"",strike:false},{name:"—",stat:"",strike:false}],
       bowler:{name:"—",stat:""}, thisOver:[], prevOver:[], partnership:null, lastWicket:null, winProb:null,
       scorecards: (scorecardCache[m.id] && scorecardCache[m.id].data) || {}, squads: squadCache[m.id] || null,
-      cricapiId: m.id, fantasyEnabled: !!m.fantasyEnabled, hasSquad: !!m.hasSquad, venue: m.venue || "",
+      finished: !!m.matchEnded, cricapiId: m.id, fantasyEnabled: !!m.fantasyEnabled, hasSquad: !!m.hasSquad, venue: m.venue || "",
       allInnings: scores
     };
   }
@@ -3431,9 +3648,10 @@
   // the match list (currentMatches) is cached by CricAPI and runs a few balls behind; match_info isn't,
   // so between list refreshes the match on screen is read straight from match_info
   var CRICAPI_LIST_EVERY_MS = 60000, cricapiListAt = 0, scorecardMissing = {};
+  var RESULT_KEEP_MS = 45 * 60000, cricapiSeenLive = {}, cricapiEndedAt = {}, cricapiUpcoming = [];
   async function fetchActiveMatchInfo(){
     var m = findActiveMatch();
-    if(!m || m.isDemo || m._src === "cricbuzz" || !m.cricapiId) return false;
+    if(!m || m.isDemo || m.finished || m._src === "cricbuzz" || !m.cricapiId) return false;
     var idx = -1;
     cricapiMatches.forEach(function(x, i){ if(x.cricapiId === m.cricapiId) idx = i; });
     if(idx < 0) return false;
@@ -3472,7 +3690,19 @@
       }
       var json = await cricapiGet("currentMatches?offset=0");
       cricapiListAt = Date.now();
-      var live = (json.data || []).filter(function(m){ return m.matchStarted && !m.matchEnded; });
+      cricapiUpcoming = (json.data || []).filter(function(x){
+        var t = matchStartMs(x.dateTimeGMT);
+        return !x.matchStarted && t && t > Date.now() - 3600000 && t < Date.now() + 3 * 86400000;
+      });
+      fillPrematchSelect();
+      var live = (json.data || []).filter(function(m){
+        if(!m.matchStarted) return false;
+        if(!m.matchEnded){ cricapiSeenLive[m.id] = true; return true; }
+        // a match that just finished stays up (with its result) for a while, if we were following it live
+        if(!cricapiSeenLive[m.id]) return false;
+        if(!cricapiEndedAt[m.id]) cricapiEndedAt[m.id] = Date.now();
+        return Date.now() - cricapiEndedAt[m.id] < RESULT_KEEP_MS;
+      });
       var stamp = new Date().toLocaleTimeString();
       var quota = CRICKET_PROXY_URL ? "" : (totalHitsLeft() + " hits left today" + (cricketKeys.length > 1 ? " across " + cricketKeys.length + " keys" : ""));
       if(!live.length){
@@ -3682,7 +3912,7 @@
 
   /* ---------------- between-overs graphics (scorecard / team sheets / summary) ---------------- */
   var BREAK_SHOW_MS = 15000;
-  var BREAK_TYPES = ["scorecard", "squads", "summary"];
+  var BREAK_TYPES = ["scorecard", "squads", "summary", "chart"];
   var breakEveryMin = 3;
   var breakTimer = null, breakHideTimer = null, breakTypeIdx = 0;
   try{
@@ -3726,6 +3956,8 @@
   }
 
   function breakAvailable(type, m){
+    if(type === "chart") return chartOvers(m).filter(function(x){ return x.v; }).length >= 2;
+    if(type === "result") return !!(m && !m.isDemo && isFinished(m));
     if(type === "scorecard"){
       var d = m.scorecards && m.scorecards[m.battingNow];
       return !!(d && d.batting && d.batting.length);
@@ -3827,7 +4059,8 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function(){ el.hidden = true; }, 3500);
   }
-  var BREAK_LABEL = {scorecard:"The full scorecard", squads:"The team sheet", summary:"The match summary"};
+  var BREAK_LABEL = {scorecard:"The full scorecard", squads:"The team sheet", summary:"The match summary", chart:"The run-rate chart", result:"The result screen"};
+  var BREAK_HINT = {chart:"The run-rate chart needs a couple of finished overs first.", result:"The result screen shows once the match has finished."};
 
   // physical key ("KeyS") so shortcuts work on any keyboard layout (Hindi, Caps Lock, ...)
   function pressedKey(e){
@@ -3846,7 +4079,8 @@
     if(activeSport !== "cricket") return false;
     var m = findActiveMatch();
     if(!breakAvailable(type, m)) return false;
-    $("ixContent").innerHTML = type === "scorecard" ? breakScorecardHTML(m) : type === "squads" ? breakSquadsHTML(m) : breakSummaryHTML(m);
+    $("ixContent").innerHTML = type === "scorecard" ? breakScorecardHTML(m) : type === "squads" ? breakSquadsHTML(m) :
+      type === "chart" ? breakChartHTML(m) : type === "result" ? breakResultHTML(m) : breakSummaryHTML(m);
     var el = $("interstitial");
     el.hidden = false;
     fitBreakPanel();
@@ -3913,12 +4147,14 @@
     if(SCORER_MODE || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if(typingInField(e)) return;
     var k = pressedKey(e);
-    var type = k === "s" ? "scorecard" : k === "t" ? "squads" : k === "m" ? "summary" : null;
-    if(e.key === "Escape") hideBreak();
+    if(k === "p"){ togglePoll(); return; }
+    if(k === "c"){ togglePrematch(); return; }
+    var type = k === "s" ? "scorecard" : k === "t" ? "squads" : k === "m" ? "summary" : k === "r" ? "chart" : k === "e" ? "result" : null;
+    if(e.key === "Escape"){ hideBreak(); hidePrematch(); }
     else if(type){
       if(!showBreak(type)){
         showToast(activeSport !== "cricket" ? "Switch to the Cricket tab to show this." :
-          BREAK_LABEL[type] + " isn't available for this match — the live feed doesn't provide it.");
+          (BREAK_HINT[type] || BREAK_LABEL[type] + " isn't available for this match — the live feed doesn't provide it."));
       }
     }
   });
@@ -3968,7 +4204,7 @@
   // the scoreboard tab tells the scorer window which live matches exist (so the scorer never calls CricAPI)
   function publishLiveInfo(){
     try{
-      localStorage.setItem("floodlight_live_info", JSON.stringify({at: Date.now(), matches: cricketRealMatches.map(function(m){
+      localStorage.setItem("floodlight_live_info", JSON.stringify({at: Date.now(), credits: creditNumbers(), matches: cricketRealMatches.map(function(m){
         return {id: m.cricapiId, title: m.teamA + " vs " + m.teamB, batting: m.battingNow, bowling: otherTeam(m, m.battingNow),
           score: m.score.runs + "/" + m.score.wkts, overs: m.score.overs, names: squadNames(m)};
       })}));
@@ -4262,9 +4498,17 @@
   }
 
   function cbIsLive(e){
-    var st = String(e.info.state || "");
-    if(/complete|abandon|no result|cancel/i.test(st)) return false;
-    return !!e.score || /progress|break|stumps|lunch|tea|drinks|rain|delay|toss/i.test(st);
+    var st = String(e.info.state || ""), id = e.info.matchId;
+    if(/complete/i.test(st)){
+      // keep a match we were following for a while after it ends, so the result can be shown
+      if(!cbSeenLive[id]) return false;
+      if(!cbEndedAt[id]) cbEndedAt[id] = Date.now();
+      return Date.now() - cbEndedAt[id] < RESULT_KEEP_MS;
+    }
+    if(/abandon|no result|cancel/i.test(st)) return false;
+    var live = !!e.score || /progress|break|stumps|lunch|tea|drinks|rain|delay|toss/i.test(st);
+    if(live) cbSeenLive[id] = true;
+    return live;
   }
 
   // turn a Cricbuzz live-list entry into the same match shape CricAPI matches use
@@ -4289,6 +4533,7 @@
     m.comp = [i.seriesName, i.matchDesc].filter(Boolean).join(" · ") || m.comp;
     m._cbId = i.matchId;
     m._src = "cricbuzz";
+    m.finished = /complete/i.test(String(i.state || ""));
     if(i.currBatTeamId === t1.teamId) m.battingNow = t1.teamName;
     else if(i.currBatTeamId === t2.teamId) m.battingNow = t2.teamName;
     return m;
@@ -4381,7 +4626,7 @@
 
   // open on the senior India match first; age-group, A-team and women's sides and matches at stumps come after
   function matchPriority(m){
-    var names = m.teamA + " " + m.teamB, p = 0;
+    var names = m.teamA + " " + m.teamB, p = m.finished ? -1 : 0;
     if(/\bindia\b/i.test(names)) p += 4;
     if(/u-?19|u-?23|women|emerging|legends|masters/i.test(names) || /\bA$|\bA\b/.test(names)) p -= 3;
     if(/stumps|abandon|no result/i.test(m.sub || "")) p -= 2;
@@ -4391,7 +4636,7 @@
     return cricketRealMatches.reduce(function(best, m){ return matchPriority(m) > matchPriority(best) ? m : best; }, cricketRealMatches[0]);
   }
 
-  var cbListTimer = null, cbInnSeen = {};
+  var cbListTimer = null, cbInnSeen = {}, cbSeenLive = {}, cbEndedAt = {};
   async function cbDiscoverTick(){
     clearTimeout(cbListTimer);
     if(!cbKeys.length || SCORER_MODE) return;
@@ -4553,7 +4798,7 @@
     clearTimeout(cbTimer);
     try{
       var m = activeSport === "cricket" ? findActiveMatch() : null;
-      if(cbKeys.length && m && !m.isDemo && m.cricapiId){
+      if(cbKeys.length && m && !m.isDemo && !m.finished && m.cricapiId){
         if(!cbIdFor[m.cricapiId] && Date.now() - cbLiveListAt > CB_LIST_EVERY_MS) await cbRefreshLiveList();
         var cbId = cbIdFor[m.cricapiId];
         if(cbId){
@@ -4767,7 +5012,8 @@
     seSocket = ws;
     setSeNote("Connecting to StreamElements…");
     ws.onopen = function(){
-      ws.send(JSON.stringify({type: "subscribe", data: {topic: "channel.activities", token: seToken, token_type: "jwt"}}));
+      ws.send(JSON.stringify({type: "subscribe", nonce: "act", data: {topic: "channel.activities", token: seToken, token_type: "jwt"}}));
+      ws.send(JSON.stringify({type: "subscribe", nonce: "chat", data: {topic: "channel.chat.message", token: seToken, token_type: "jwt"}}));
     };
     ws.onmessage = function(ev){
       var msg;
@@ -4775,6 +5021,11 @@
       if(!msg || typeof msg !== "object") return;
       if(msg.type === "response"){
         var e = msg.error || (msg.data && msg.data.error);
+        if(msg.nonce === "chat"){
+          setPollNote(e ? "Chat votes unavailable (" + (typeof e === "string" ? e : (e.code || e.message || "error")) + ")." :
+            "Chat votes on — viewers type 1 or 2 in YouTube chat.", e ? "err" : "ok");
+          return;
+        }
         if(e){
           var code = typeof e === "string" ? e : (e.code || e.message || "error");
           if(/unauthor|token|forbidden|invalid|denied/i.test(code)){
@@ -4795,6 +5046,7 @@
       var rt = seDeepFind(msg, /reconnect.?token/i);
       if(rt) seReconnectToken = rt;
       if(msg.type === "message" && msg.topic === "channel.activities") handleSeActivity(msg.data);
+      if(msg.type === "message" && msg.topic === "channel.chat.message") handleSeChat(msg.data);
     };
     ws.onclose = function(){
       if(seSocket !== ws) return;
@@ -5072,6 +5324,500 @@
     var c = cbId && cbTeamsCache[cbId];
     if(c && Object.keys(c.squads).length){ m.squads = c.squads; m._xi = true; }
   }
+
+
+  /* ======================= stream extras ======================= */
+  var LIM_OVERS = {odi: 50, t20: 20, t10: 10};
+  function isFinished(m){ return !!(m && (m.finished || /\bwon by\b|match tied|no result|abandoned|match drawn/i.test(m.sub || ""))); }
+  function shortName(n){ var p = String(n || "").trim().split(/\s+/); return p.length > 1 ? p[p.length - 1] : p[0] || ""; }
+  function todayStr(){ return new Date().toDateString(); }
+  function matchStartMs(gmt){
+    if(!gmt) return 0;
+    var t = Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(gmt) ? gmt : gmt + "Z");
+    return isNaN(t) ? 0 : t;
+  }
+
+  /* ---------- over-by-over history (for the end-of-over banner and the run-rate chart) ---------- */
+  var ovStore = {};
+  function ovKey(m, inn){ return [cbTeamKey(m.teamA), cbTeamKey(m.teamB)].sort().join("_") + "_" + inn; }
+  function getOv(m, inn){
+    var k = ovKey(m, inn);
+    if(!ovStore[k]){
+      var saved = null;
+      if(!m.isDemo){ try { saved = JSON.parse(localStorage.getItem("floodlight_ovr_" + k) || "null"); } catch(e){} }
+      ovStore[k] = saved && saved.day === todayStr() ? saved : {day: todayStr(), cum: {}, exact: {}};
+    }
+    return ovStore[k];
+  }
+  function tokensTotal(tks){
+    var r = 0, w = 0, legal = 0;
+    tks.forEach(function(t){
+      t = String(t);
+      var num = parseInt(t, 10), n = isNaN(num) ? 0 : num;
+      if(/^W/i.test(t)){ w++; legal++; return; }
+      if(/wd/i.test(t)){ r += isNaN(num) ? 1 : num; return; }
+      if(/nb/i.test(t)){ r += 1 + n; return; }
+      legal++; r += n;
+    });
+    return {r: r, w: w, legal: legal};
+  }
+  function recordOvers(m, inn){
+    var o = getOv(m, inn), changed = false, balls = oversToBalls(m.score.overs);
+    if(balls > 0 && balls % 6 === 0){
+      var n = balls / 6, c = o.cum[n];
+      if(!c || c.r !== +m.score.runs || c.w !== +m.score.wkts){ o.cum[n] = {r: +m.score.runs, w: +m.score.wkts}; changed = true; }
+    }
+    var done = m._manualOverNo != null ? m._manualOverNo : Math.floor(balls / 6);
+    var po = m.prevOver || [];
+    if(done > 0 && po.length && po.indexOf("•") === -1){
+      var t = tokensTotal(po), ex = o.exact[done];
+      if(t.legal >= 6 && (!ex || ex.r !== t.r || ex.w !== t.w)){ o.exact[done] = {r: t.r, w: t.w}; changed = true; }
+    }
+    if(changed && !m.isDemo){ try { localStorage.setItem("floodlight_ovr_" + ovKey(m, inn), JSON.stringify(o)); } catch(e){} }
+  }
+  function overRunsFor(m, inn, n){
+    var o = getOv(m, inn);
+    if(o.exact[n]) return o.exact[n];
+    var c = o.cum[n], pc = n === 1 ? {r: 0, w: 0} : o.cum[n - 1];
+    return c && pc ? {r: c.r - pc.r, w: c.w - pc.w} : null;
+  }
+  function chartOvers(m){
+    if(!m || !m.score) return [];
+    var inn = (m.allInnings || []).length || 1, done = Math.floor(oversToBalls(m.score.overs) / 6), out = [];
+    for(var n = Math.max(1, done - 29); n <= done; n++) out.push({n: n, v: overRunsFor(m, inn, n)});
+    // the site only knows the overs it has watched: start the chart at the first one it saw
+    while(out.length && !out[0].v) out.shift();
+    return out;
+  }
+
+  function breakChartHTML(m){
+    var data = chartOvers(m), max = 12;
+    data.forEach(function(d){ if(d.v) max = Math.max(max, d.v.r); });
+    var cols = data.map(function(d){
+      var h = d.v ? Math.max(d.v.r / max * 100, 3) : 3, wk = "";
+      for(var i = 0; i < (d.v ? d.v.w : 0); i++) wk += '<span class="ch-wk" style="top:' + (3 + i * 14) + 'px"></span>';
+      return '<div class="ch-col"><div class="ch-val">' + (d.v ? d.v.r : "") + '</div><div class="ch-bar' + (d.v ? '' : ' empty') +
+        '" style="height:' + h.toFixed(1) + '%">' + wk + '</div><div class="ch-n">' + d.n + '</div></div>';
+    }).join("");
+    var team = m.battingNow || m.teamA;
+    var foot = ['<span>CRR <b>' + (+m.crr || 0).toFixed(2) + '</b></span>'];
+    if(m.target && m.rrr) foot.push('<span>RRR <b>' + (+m.rrr).toFixed(2) + '</b></span><span>Target <b>' + m.target + '</b></span>');
+    if((m.allInnings || []).length >= 2){
+      var f = m.allInnings[0];
+      foot.push('<span>1st innings <b>' + f.r + '/' + f.w + '</b> (' + esc(String(f.o)) + ' ov)</span>');
+    }
+    foot.push('<span><b style="color:#ff6b6b;">●</b> wicket</span>');
+    return ixHead("", "Runs per over", team, esc(m.score.runs + "/" + m.score.wkts) + ' <small>(' + esc(m.score.overs) + ' ov)</small>', ixBadge(m, team)) +
+      '<div class="ix-chart">' + cols + '</div><div class="ch-foot">' + foot.join("") + '</div>';
+  }
+
+  function bestPerformers(m){
+    var bat = null, bowl = null, sc = m.scorecards || {};
+    Object.keys(sc).forEach(function(team){
+      (sc[team].batting || []).forEach(function(b){ if(!bat || b.r > bat.r || (b.r === bat.r && b.b < bat.b)) bat = {name: b.name, r: b.r, b: b.b}; });
+      (sc[team].bowling || []).forEach(function(w){ if(!bowl || w.w > bowl.w || (w.w === bowl.w && w.r < bowl.r)) bowl = {name: w.name, w: w.w, r: w.r, o: w.o}; });
+    });
+    return {bat: bat, bowl: bowl};
+  }
+  function breakResultHTML(m){
+    var rows = breakInnings(m).map(function(r){
+      return '<div class="ix-inn-row' + (r.pending ? ' pending' : '') + '">' + ixBadge(m, r.team) +
+        '<span class="ix-inn-team">' + esc(r.team) + '</span><span class="ix-inn-score">' + esc(r.text) +
+        (r.overs !== "" && r.overs != null ? ' <small>(' + esc(String(r.overs)) + ' ov)</small>' : '') + '</span></div>';
+    }).join("");
+    var best = bestPerformers(m), stars = "";
+    if(best.bat) stars += '<div class="rs-star"><span class="rs-tag">TOP SCORER</span><span class="rs-name">' + esc(best.bat.name) + '</span><span class="rs-fig">' + best.bat.r + ' (' + best.bat.b + ')</span></div>';
+    if(best.bowl && best.bowl.w) stars += '<div class="rs-star"><span class="rs-tag">BEST BOWLING</span><span class="rs-name">' + esc(best.bowl.name) + '</span><span class="rs-fig">' + best.bowl.w + '/' + best.bowl.r + ' (' + esc(String(best.bowl.o)) + ' ov)</span></div>';
+    return ixHead("neutral", "Match result", m.teamA + " vs " + m.teamB, "", "") +
+      '<div class="ix-summary"><div class="rs-headline">' + esc(m.sub || "Match over") + '</div>' + rows +
+      (stars ? '<div class="rs-stars">' + stars + '</div>' : '') + '</div>';
+  }
+
+  /* ---------- lower-third banners (end of over, partnerships, new bowler) ---------- */
+  var bannerQ = [], bannerBusy = false;
+  function queueBanner(b){
+    if(SCORER_MODE) return;
+    bannerQ.push(b);
+    if(bannerQ.length > 4) bannerQ.shift();
+    if(!bannerBusy) nextBanner();
+  }
+  function nextBanner(){
+    var b = bannerQ.shift(), el = $("infoBanner");
+    if(!b){ bannerBusy = false; return; }
+    bannerBusy = true;
+    $("ibKicker").textContent = b.kicker || "";
+    $("ibMain").textContent = b.main || "";
+    $("ibSub").textContent = b.sub || "";
+    el.className = "info-banner " + (b.cls || "");
+    void el.offsetWidth;
+    el.classList.add("show");
+    setTimeout(function(){ el.classList.remove("show"); setTimeout(nextBanner, 600); }, 6500);
+  }
+
+  /* ---------- per-render checks: milestones, banners, head-to-head, result ---------- */
+  var xState = {}, resultShown = {}, liveSeenX = {};
+  function streamExtras(m){
+    if(!EXTRAS_READY || SCORER_MODE) return;
+    renderCreditWarn();
+    if(!m || activeSport !== "cricket" || !m.score) return;
+    renderPressure(m);
+    var inn = (m.allInnings || []).length || 1;
+    var key = m.id + ":" + inn;
+    var st = xState[key];
+    if(!st) st = xState[key] = {batRuns: {}, bowlW: {}, pship: {}, overDone: null, bowler: null, announced: null, bat: {}, h2h: {}};
+    var balls = oversToBalls(m.score.overs);
+    var fin = isFinished(m);
+    var bowler = m.bowler && m.bowler.name && m.bowler.name !== "—" ? m.bowler.name : null;
+
+    // batting milestones + batter-vs-bowler tally
+    (m.batters || []).forEach(function(b){
+      if(!b || !b.name || b.name === "—") return;
+      var ps = parseBatStat(b.stat), r = +ps.runs || 0, bb = +ps.balls || 0;
+      var prev = st.batRuns[b.name];
+      if(prev != null && r > prev){
+        [50, 100, 150, 200].forEach(function(t){
+          if(prev < t && r >= t) queueFx({cls: "milestone", num: String(t), word: t === 50 ? "FIFTY!" : t === 100 ? "CENTURY!" : t + " UP!",
+            name: b.name, how: r + " (" + bb + ")" + (b.fours != null ? " · " + b.fours + "×4 · " + (b.six || 0) + "×6" : ""), dur: 3300});
+        });
+      }
+      if(prev == null || r > prev) st.batRuns[b.name] = r;
+      var o = st.bat[b.name];
+      if(o && bowler && bb > o.b){
+        var hk = b.name + "|" + bowler, h = st.h2h[hk] || (st.h2h[hk] = {r: 0, b: 0, f: 0, s: 0});
+        h.r += Math.max(r - o.r, 0); h.b += bb - o.b;
+        h.f += Math.max((b.fours || 0) - o.f, 0); h.s += Math.max((b.six || 0) - o.s, 0);
+      }
+      if(!o || bb >= o.b) st.bat[b.name] = {r: r, b: bb, f: b.fours || 0, s: b.six || 0};
+    });
+
+    // five-wicket haul
+    if(bowler){
+      var parts = String(m.bowler.stat || "").split("-"), w = +parts[3] || 0, pw = st.bowlW[bowler];
+      if(pw != null && pw < 5 && w >= 5) queueFx({cls: "milestone", num: "5W", word: "FIVE-WICKET HAUL", name: bowler,
+        how: w + "/" + (parts[2] || 0) + " (" + (parts[0] || 0) + " ov)", dur: 3300});
+      if(pw == null || w > pw) st.bowlW[bowler] = w;
+    }
+
+    // partnership 50 / 100 / 150
+    if(m.partnership && (m.batters || []).length === 2 && m.batters[0] && m.batters[1]){
+      var pk = [m.batters[0].name, m.batters[1].name].sort().join(" & ");
+      var pr = +m.partnership.runs || 0, pp = st.pship[pk];
+      if(pp != null) [50, 100, 150, 200].forEach(function(t){
+        if(pp < t && pr >= t) queueBanner({cls: "pship", kicker: t + " PARTNERSHIP", main: shortName(m.batters[0].name) + " & " + shortName(m.batters[1].name),
+          sub: pr + " runs off " + (m.partnership.balls || 0) + " balls"});
+      });
+      if(pp == null || pr > pp) st.pship[pk] = pr;
+    }
+
+    // end of over
+    recordOvers(m, inn);
+    var done = Math.floor(balls / 6);
+    if(st.overDone != null && done > st.overDone && balls > 0 && !fin){
+      var ov = overRunsFor(m, inn, done), sub = [];
+      if(ov) sub.push(ov.r + " run" + (ov.r === 1 ? "" : "s") + " off the over" + (ov.w ? " · " + ov.w + " wkt" + (ov.w > 1 ? "s" : "") : ""));
+      sub.push("CRR " + (+m.crr || 0).toFixed(2));
+      if(m.target && m.ballsRemaining != null) sub.push("Need " + Math.max(m.target - m.score.runs, 0) + " off " + m.ballsRemaining);
+      queueBanner({cls: "over", kicker: "END OF OVER " + done, main: (m.battingNow || "") + "  " + m.score.runs + "/" + m.score.wkts, sub: sub.join(" · ")});
+    }
+    st.overDone = done;
+
+    // a new bowler: their figures and how they've done against the two batters
+    if(bowler && st.bowler !== null && bowler !== st.bowler && bowler !== st.announced && !fin){
+      st.announced = bowler;
+      var bp = String(m.bowler.stat || "").split("-");
+      var lines = [bp.length >= 4 ? bp[3] + "-" + bp[2] + " (" + bp[0] + " ov) so far" : "First over"];
+      (m.batters || []).forEach(function(b){
+        var h = b && st.h2h[b.name + "|" + bowler];
+        if(h && h.b >= 3) lines.push("vs " + shortName(b.name) + ": " + h.r + " off " + h.b + (h.s ? " · " + h.s + "×6" : "") + (h.f ? " · " + h.f + "×4" : ""));
+      });
+      queueBanner({cls: "bowl", kicker: "NOW BOWLING", main: bowler, sub: lines.join(" · ")});
+    }
+    if(bowler) st.bowler = bowler; else if(st.bowler === null) st.bowler = "";
+
+    // result screen once, when a match we watched live finishes
+    if(!m.isDemo){
+      if(!fin) liveSeenX[m.id] = true;
+      else if(liveSeenX[m.id] && !resultShown[m.id]){
+        resultShown[m.id] = true;
+        var showResult = function(){
+          var am = findActiveMatch();
+          if(am && am.cricapiId && scorecardCache[am.cricapiId]) am.scorecards = scorecardCache[am.cricapiId].data;
+          if(!showBreak("result")) showBreak("summary");
+        };
+        if(m.cricapiId && m.fantasyEnabled && cricketKeys.length){
+          // read the final scorecard first, so top scorer / best bowler are the final figures
+          delete scorecardCache[m.cricapiId];
+          scorecardFetchState[m.cricapiId] = "idle";
+          Promise.resolve(fetchMatchScorecard(m)).then(function(){ setTimeout(showResult, 2500); }, function(){ setTimeout(showResult, 2500); });
+        } else setTimeout(showResult, 6000);
+      }
+    }
+
+    // a pre-match screen gives way once the match is live
+    if(prematchVisible() && pmCfg && pmCfg.at < Date.now() && cbSameTeams(m.teamA, m.teamB, pmCfg.t1, pmCfg.t2) && !m.isDemo) hidePrematch();
+  }
+
+  /* ---------- chase pressure ---------- */
+  function renderPressure(m){
+    var el = $("bcPressure");
+    if(!el) return;
+    var mo = LIM_OVERS[m.matchType];
+    var chase = mo && m.target && (m.allInnings || []).length >= 2 && !isFinished(m) && m.rrr != null && m.ballsRemaining;
+    el.hidden = !chase;
+    if(!chase) return;
+    var rrr = +m.rrr, ratio = rrr / Math.max(+m.crr || 0, 1);
+    var level = ratio < 0.9 ? 0 : ratio < 1.15 ? 1 : ratio < 1.5 ? 2 : 3;
+    var names = ["EASY", "STEADY", "TOUGH", "VERY HARD"], colors = ["#2ecc71", "#f1c40f", "#ff8a00", "#e8343f"];
+    $("bcPressureFill").style.width = Math.min(100, Math.max(6, rrr / (mo === 50 ? 12 : 18) * 100)) + "%";
+    $("bcPressureFill").style.backgroundColor = colors[level];
+    $("bcPressureVal").textContent = "RRR " + rrr.toFixed(2) + " · " + names[level];
+    $("bcPressureVal").style.color = colors[level];
+  }
+
+  /* ---------- credits warning (Settings + Scorer window only, never on the stream) ---------- */
+  function creditNumbers(){
+    var cb = (typeof cbKeys !== "undefined" && cbKeys && cbKeys.length) ? cbRequestsLeft() : null;
+    return {cricapi: cricketKeys.length && !CRICKET_PROXY_URL ? totalHitsLeft() : null, cricbuzz: cb};
+  }
+  function renderCreditWarn(){
+    var el = $("creditWarn");
+    if(!el) return;
+    var c = creditNumbers(), msgs = [];
+    if(c.cricapi != null && c.cricapi < 300){
+      // below 300 the score refreshes once a minute, so requests left ≈ minutes left
+      var hl = Math.floor(c.cricapi / 60), ml = c.cricapi % 60;
+      msgs.push("⚠ CricAPI: only " + c.cricapi + " requests left today — score now refreshes once a minute (about " + (hl ? hl + "h " : "") + ml + " min left).");
+    }
+    if(c.cricbuzz != null && c.cricbuzz < 40) msgs.push("⚠ Cricbuzz: only " + c.cricbuzz + " requests left today — player cards and recent balls stop updating when they run out.");
+    el.hidden = !msgs.length;
+    el.textContent = msgs.join("  ");
+    $("settingsBtn").classList.toggle("has-warn", msgs.length > 0);
+  }
+
+  /* ---------- like & subscribe reminder ---------- */
+  var likeEveryMin = 15, lastLikeAt = Date.now();
+  try { var lk = localStorage.getItem("floodlight_like"); if(lk !== null && !isNaN(+lk)) likeEveryMin = +lk; } catch(e){}
+  function showLikeReminder(){
+    var el = $("likeRemind");
+    if(!el || SCORER_MODE) return;
+    var ch = ($("watermark") && $("watermark").textContent || "").trim();
+    $("likeChannel").textContent = ch && ch !== "FLOODLIGHT" ? "to " + ch + " — every ball, live" : "for every ball, live";
+    lastLikeAt = Date.now();
+    el.classList.remove("show");
+    void el.offsetWidth;
+    el.classList.add("show");
+    setTimeout(function(){ el.classList.remove("show"); }, 9000);
+  }
+  if(!SCORER_MODE){
+    $("likeSelect").value = String(likeEveryMin);
+    $("likeSelect").addEventListener("change", function(){
+      likeEveryMin = +this.value || 0;
+      lastLikeAt = Date.now();
+      try { localStorage.setItem("floodlight_like", String(likeEveryMin)); } catch(e){}
+    });
+    $("likeNowBtn").addEventListener("click", function(){ closeDrawer(); showLikeReminder(); });
+    setInterval(function(){
+      if(!likeEveryMin || Date.now() - lastLikeAt < likeEveryMin * 60000) return;
+      if(fxBusy() || !$("interstitial").hidden || prematchVisible()) return;
+      showLikeReminder();
+    }, 15000);
+  }
+
+  /* ---------- "Who will win?" chat poll ---------- */
+  var poll = null, pollTick = null;
+  function setPollNote(text, cls){ var el = $("pollNote"); if(!el) return; el.className = "status-note" + (cls ? " " + cls : ""); el.textContent = text; }
+  function teamCodeFor(m, t){ var info = teamInfoFor(m, t); return ((info && info.shortname) || teamCode(t)).toUpperCase(); }
+  function startPoll(){
+    var m = findActiveMatch();
+    if(!m) return;
+    var mins = +($("pollMinutes").value) || 3;
+    poll = {active: true, m: m, teams: [m.teamA, m.teamB], codes: [teamCodeFor(m, m.teamA), teamCodeFor(m, m.teamB)], votes: {}, endsAt: Date.now() + mins * 60000};
+    clearInterval(pollTick);
+    pollTick = setInterval(function(){ if(poll && poll.active && Date.now() >= poll.endsAt) stopPoll(); else renderPoll(); }, 1000);
+    renderPoll();
+  }
+  function stopPoll(){
+    if(!poll || !poll.active) return;
+    poll.active = false;
+    clearInterval(pollTick);
+    renderPoll();
+    var mine = poll;
+    setTimeout(function(){ if(poll === mine){ $("pollBox").hidden = true; poll = null; } }, 15000);
+  }
+  function togglePoll(){ if(poll && poll.active) stopPoll(); else startPoll(); }
+  function pollVote(author, text){
+    if(!poll || !poll.active) return;
+    var t = String(text || "").trim().toLowerCase().replace(/^#/, ""), pick = null;
+    if(/^1(\s|$|!)/.test(t)) pick = 0;
+    else if(/^2(\s|$|!)/.test(t)) pick = 1;
+    else poll.teams.forEach(function(name, i){ if(t === name.toLowerCase() || t === poll.codes[i].toLowerCase()) pick = i; });
+    if(pick === null) return;
+    poll.votes[author || ("viewer" + Math.random())] = pick;
+    renderPoll();
+  }
+  function handleSeChat(d){
+    if(!d) return;
+    var sn = d.snippet || {}, ad = d.authorDetails || {};
+    var text = sn.displayMessage || (sn.textMessageDetails && sn.textMessageDetails.messageText) || (d.message && d.message.text) || d.text || d.content || "";
+    var who = ad.channelId || ad.displayName || d.chatter_user_id || d.chatter_user_name || (d.sender && d.sender.username) || "";
+    pollVote(who, text);
+  }
+  function renderPoll(){
+    var box = $("pollBox");
+    if(!poll){ box.hidden = true; return; }
+    var counts = [0, 0];
+    Object.keys(poll.votes).forEach(function(k){ counts[poll.votes[k]]++; });
+    var total = counts[0] + counts[1];
+    var pct = counts.map(function(c){ return total ? Math.round(c * 100 / total) : 0; });
+    var left = Math.max(0, poll.endsAt - Date.now()), mm = Math.floor(left / 60000), ss = Math.floor(left / 1000) % 60;
+    var winner = counts[0] === counts[1] ? -1 : counts[0] > counts[1] ? 0 : 1;
+    var rows = poll.teams.map(function(t, i){
+      var url = teamBadgeUrl(poll.m, t);
+      return '<div class="pl-row ' + (i ? 'b' : 'a') + (!poll.active && i === winner ? ' win' : '') + '">' +
+        (url ? '<img class="pl-flag" src="' + esc(url) + '" alt="">' : '<span class="pl-flag"></span>') +
+        '<div class="pl-bar"><div class="pl-fill" style="width:' + pct[i] + '%"></div><div class="pl-name">' + (i + 1) + ' · ' + esc(t) + '</div></div>' +
+        '<div class="pl-pct">' + pct[i] + '%</div></div>';
+    }).join("");
+    var foot = poll.active ? 'Type <b>1</b> or <b>2</b> in chat · ' + total + ' vote' + (total === 1 ? '' : 's') + ' · ' + mm + ':' + (ss < 10 ? '0' : '') + ss + ' left'
+      : 'Poll closed · ' + total + ' vote' + (total === 1 ? '' : 's') + (winner >= 0 ? ' · fans back ' + esc(poll.teams[winner]) : ' · dead heat!');
+    box.innerHTML = '<div class="pl-title">' + (poll.active ? 'WHO WILL WIN?' : 'FANS HAVE SPOKEN') + '</div>' + rows + '<div class="pl-foot">' + foot + '</div>';
+    box.classList.toggle("closed", !poll.active);
+    box.hidden = false;
+  }
+  if(!SCORER_MODE){
+    $("pollStartBtn").addEventListener("click", function(){ closeDrawer(); startPoll(); });
+    $("pollStopBtn").addEventListener("click", function(){ stopPoll(); });
+    $("pollSimBtn").addEventListener("click", function(){
+      closeDrawer();
+      if(!poll || !poll.active) startPoll();
+      for(var i = 0; i < 30; i++) (function(i){
+        setTimeout(function(){ pollVote("test" + i, Math.random() < 0.62 ? "1" : "2"); }, 250 * i);
+      })(i);
+    });
+  }
+
+  /* ---------- pre-match countdown screen ---------- */
+  var pmCfg = null, pmTick = null;
+  try { pmCfg = JSON.parse(localStorage.getItem("floodlight_prematch") || "null"); } catch(e){}
+  function prematchVisible(){ var el = $("prematch"); return !!(el && !el.hidden); }
+  function teamFlagHTML(name){
+    var url = teamBadgeUrl({teamInfo: []}, name);
+    return url ? '<img src="' + esc(url) + '" alt="">' : teamCrestSVG(teamCode(name).slice(0, 2));
+  }
+  function readPrematchFields(){
+    var at = $("pmTime").value ? new Date($("pmTime").value).getTime() : 0;
+    return {t1: $("pmTeam1").value.trim(), t2: $("pmTeam2").value.trim(), at: at || 0,
+      title: $("pmTitle").value.trim(), venue: $("pmVenue").value.trim()};
+  }
+  function writePrematchFields(c){
+    if(!c) return;
+    $("pmTeam1").value = c.t1 || ""; $("pmTeam2").value = c.t2 || "";
+    $("pmTitle").value = c.title || ""; $("pmVenue").value = c.venue || "";
+    if(c.at){
+      var d = new Date(c.at), pad = function(n){ return (n < 10 ? "0" : "") + n; };
+      $("pmTime").value = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+    }
+  }
+  function renderPrematch(){
+    var c = pmCfg, el = $("prematch");
+    if(!c) return;
+    var left = c.at ? c.at - Date.now() : 0, count, when = "";
+    if(c.at && left > 0){
+      var s2 = Math.floor(left / 1000), d = Math.floor(s2 / 86400), h = Math.floor(s2 / 3600) % 24, mi = Math.floor(s2 / 60) % 60, se = s2 % 60;
+      var pad = function(n){ return (n < 10 ? "0" : "") + n; };
+      count = (d ? d + "d " : "") + pad(h) + ":" + pad(mi) + ":" + pad(se);
+    } else count = c.at ? "STARTING NOW" : "COMING UP";
+    if(c.at) when = "Starts " + new Date(c.at).toLocaleString([], {weekday: "short", hour: "numeric", minute: "2-digit"});
+    el.innerHTML = '<div class="pm-kicker">LIVE COVERAGE</div>' + (c.title ? '<div class="pm-title">' + esc(c.title) + '</div>' : '') +
+      '<div class="pm-teams"><div class="pm-team"><div class="pm-flag">' + teamFlagHTML(c.t1) + '</div><div class="pm-name">' + esc(c.t1) + '</div></div>' +
+      '<div class="pm-vs">VS</div><div class="pm-team"><div class="pm-flag">' + teamFlagHTML(c.t2) + '</div><div class="pm-name">' + esc(c.t2) + '</div></div></div>' +
+      '<div class="pm-count">' + count + '</div>' +
+      '<div class="pm-when">' + esc([when, c.venue].filter(Boolean).join(" · ")) + '</div><div class="pm-live">● LIVE SOON</div>';
+  }
+  function showPrematch(){
+    if(!pmCfg || !pmCfg.t1 || !pmCfg.t2){ showToast("Set up the pre-match screen in Settings first (teams and start time)."); return false; }
+    $("prematch").hidden = false;
+    renderPrematch();
+    clearInterval(pmTick);
+    pmTick = setInterval(renderPrematch, 1000);
+    return true;
+  }
+  function hidePrematch(){ var el = $("prematch"); if(el) el.hidden = true; clearInterval(pmTick); }
+  function togglePrematch(){ if(prematchVisible()) hidePrematch(); else showPrematch(); }
+  function fillPrematchSelect(){
+    var sel = $("pmSelect");
+    if(!sel || SCORER_MODE) return;
+    var keep = sel.value;
+    sel.innerHTML = '<option value="">Pick an upcoming match (from CricAPI)…</option>' + cricapiUpcoming.map(function(x, i){
+      var t = matchStartMs(x.dateTimeGMT);
+      return '<option value="' + i + '">' + esc((x.teams || []).join(" vs ") + " · " + new Date(t).toLocaleString([], {weekday: "short", hour: "numeric", minute: "2-digit"})) + '</option>';
+    }).join("");
+    if(keep && +keep < cricapiUpcoming.length) sel.value = keep;
+  }
+  if(!SCORER_MODE){
+    writePrematchFields(pmCfg);
+    $("pmSelect").addEventListener("change", function(){
+      var x = cricapiUpcoming[+this.value];
+      if(!x || this.value === "") return;
+      writePrematchFields({t1: (x.teams || [])[0], t2: (x.teams || [])[1], at: matchStartMs(x.dateTimeGMT),
+        title: String(x.name || "").split(",").slice(1).join(",").trim() || x.name, venue: x.venue || ""});
+    });
+    $("pmShowBtn").addEventListener("click", function(){
+      pmCfg = readPrematchFields();
+      try { localStorage.setItem("floodlight_prematch", JSON.stringify(pmCfg)); } catch(e){}
+      if(showPrematch()) closeDrawer();
+    });
+    $("pmHideBtn").addEventListener("click", hidePrematch);
+    $("chartNowBtn").addEventListener("click", function(){ closeDrawer(); if(!showBreak("chart")) showToast(BREAK_HINT.chart); });
+    $("resultNowBtn").addEventListener("click", function(){ closeDrawer(); if(!showBreak("result")) showToast(BREAK_HINT.result); });
+    $("previewFiftyBtn").addEventListener("click", function(){
+      closeDrawer();
+      var m = findActiveMatch(), b = m && (m.batters || [])[0];
+      queueFx({cls: "milestone", num: "50", word: "FIFTY!", name: b && b.name !== "—" ? b.name : "Shreyas Iyer", how: "50 (31) · 5×4 · 2×6", dur: 3300});
+    });
+  }
+
+  /* ---------- commands from the Scorer window ---------- */
+  function runCmd(cmd){
+    if(cmd === "poll") togglePoll();
+    else if(cmd === "prematch") togglePrematch();
+    else if(cmd === "remind") showLikeReminder();
+    else if(cmd === "chart" || cmd === "result" || cmd === "summary"){
+      if(!showBreak(cmd)) showToast(BREAK_HINT[cmd] || BREAK_LABEL[cmd] + " isn't available right now.");
+    }
+  }
+  if(!SCORER_MODE){
+    var cmdSeen = {};
+    window.addEventListener("storage", function(e){
+      if(e.key !== "floodlight_cmd" || !e.newValue) return;
+      try { var c = JSON.parse(e.newValue); if(c && !cmdSeen[c.id]){ cmdSeen[c.id] = true; runCmd(c.cmd); } } catch(err){}
+    });
+  } else {
+    document.querySelectorAll(".sc-ctrls [data-cmd]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        try { localStorage.setItem("floodlight_cmd", JSON.stringify({id: Date.now() + ":" + Math.random(), cmd: btn.dataset.cmd})); } catch(e){}
+        var t = btn.textContent; btn.textContent = "Sent ✓";
+        setTimeout(function(){ btn.textContent = t; }, 1000);
+      });
+    });
+    var showScCredits = function(){
+      var el = $("scCredits");
+      if(!el) return;
+      var info = null;
+      try { info = JSON.parse(localStorage.getItem("floodlight_live_info") || "null"); } catch(e){}
+      var c = info && info.credits;
+      if(!c){ el.textContent = ""; return; }
+      var parts = [];
+      if(c.cricapi != null) parts.push("CricAPI " + c.cricapi + " left");
+      if(c.cricbuzz != null) parts.push("Cricbuzz " + c.cricbuzz + " left");
+      el.textContent = parts.length ? "Credits today: " + parts.join(" · ") : "";
+      el.classList.toggle("low", (c.cricapi != null && c.cricapi < 300) || (c.cricbuzz != null && c.cricbuzz < 40));
+    };
+    showScCredits();
+    setInterval(showScCredits, 5000);
+  }
+
+  var EXTRAS_READY = true;
 
 })();
 </script>
