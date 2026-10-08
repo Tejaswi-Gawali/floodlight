@@ -3423,19 +3423,55 @@
     if(!cricketKeys.length) return CRICKET_POLL_MS;
     var hitsLeft = totalHitsLeft();
     if(hitsLeft <= 0) return Math.min(Math.max(soonestKeyRetryMs(), CRICKET_POLL_MS), 30 * 60000);
-    if(!cricapiMatches.some(function(x){ return !x.finished; })) return CRICKET_IDLE_POLL_MS;
+    if(!cricapiMatches.some(function(x){ return !x.finished; })){
+      // a match is due (from 10 min before its start time): check every minute so the first ball isn't missed
+      var due = (cricapiUpcoming || []).some(function(x){ var t = matchStartMs(x.dateTimeGMT); return t && Date.now() > t - 10 * 60000; });
+      // ...or the start time typed into the pre-match countdown
+      if(typeof pmCfg !== "undefined" && pmCfg && pmCfg.at && Date.now() > pmCfg.at - 10 * 60000 && Date.now() < pmCfg.at + 3 * 3600000) due = true;
+      return due ? CRICKET_SLOW_POLL_MS : CRICKET_IDLE_POLL_MS;
+    }
+    // no point asking every 10 s while play is stopped
+    var am = findActiveMatch();
+    if(am && !am.isDemo && !am.finished && am.cricapiId){
+      var sub = String(am.sub || "");
+      if(/stumps|starts at|not started/i.test(sub)) return CRICKET_IDLE_POLL_MS;
+      if(/lunch|\btea\b|drinks|rain|bad light|wet outfield|delayed|stopped/i.test(sub)) return CRICKET_SLOW_POLL_MS;
+    }
     return hitsLeft < CRICKET_LOW_HITS ? CRICKET_SLOW_POLL_MS : CRICKET_POLL_MS;
   }
 
+  // every API request gives up after 8 s, so one stuck request can never freeze the score
+  function fetchT(url, opts, ms){
+    var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var o = Object.assign({}, opts || {});
+    if(ctl) o.signal = ctl.signal;
+    var t = setTimeout(function(){ if(ctl) ctl.abort(); }, ms || 8000);
+    return fetch(url, o).then(function(r){ clearTimeout(t); return r; }, function(e){
+      clearTimeout(t);
+      throw e && e.name === "AbortError" ? new Error("request timed out") : e;
+    });
+  }
+
+  var cricketLastPollAt = 0, cricketPollKey = null;
   function scheduleNextCricketPoll(key){
     var gen = cricketPollGen;
+    cricketPollKey = key;
     cricketRefreshEveryMs = nextCricketPollMs();
+    clearTimeout(cricketPollTimer);
     cricketPollTimer = setTimeout(async function(){
-      await fetchCricketLive(key, {silent:true});
+      cricketLastPollAt = Date.now();
+      try { await fetchCricketLive(key, {silent:true}); } catch(e){}
       if(gen === cricketPollGen) scheduleNextCricketPoll(key);
     }, cricketRefreshEveryMs);
+    cricketLastPollAt = cricketLastPollAt || Date.now();
     if(activeSport === "cricket") renderRefreshNote();
   }
+  // safety net: if the refresh loop ever stalls, start it again
+  setInterval(function(){
+    if(SCORER_MODE || !cricketPollKey || !cricketKeys.length) return;
+    var expected = (cricketRefreshEveryMs || CRICKET_POLL_MS) + 20000;
+    if(Date.now() - cricketLastPollAt > expected){ cricketLastPollAt = Date.now(); scheduleNextCricketPoll(cricketPollKey); }
+  }, 15000);
 
   function renderRefreshNote(){
     var el = $("cricketRefreshNote");
@@ -3547,7 +3583,7 @@
     if(!scKey) return;
     scorecardFetchState[m.cricapiId] = "loading";
     try{
-      var res = await fetch("https://api.cricapi.com/v1/match_scorecard?apikey=" + encodeURIComponent(scKey) + "&id=" + encodeURIComponent(m.cricapiId));
+      var res = await fetchT("https://api.cricapi.com/v1/match_scorecard?apikey=" + encodeURIComponent(scKey) + "&id=" + encodeURIComponent(m.cricapiId));
       var json = await res.json();
       recordKeyInfo(scKey, json.info);
       if(json.status !== "success" || !json.data || !json.data.scorecard){
@@ -3598,7 +3634,7 @@
     if(!sqKey) return;
     squadFetchState[m.cricapiId] = "loading";
     try{
-      var res = await fetch("https://api.cricapi.com/v1/match_squad?apikey=" + encodeURIComponent(sqKey) + "&id=" + encodeURIComponent(m.cricapiId));
+      var res = await fetchT("https://api.cricapi.com/v1/match_squad?apikey=" + encodeURIComponent(sqKey) + "&id=" + encodeURIComponent(m.cricapiId));
       var json = await res.json();
       recordKeyInfo(sqKey, json.info);
       if(json.status !== "success" || !Array.isArray(json.data)){ squadFetchState[m.cricapiId] = "unavailable"; return; }
@@ -3621,13 +3657,13 @@
     while(true){
       var useKey = CRICKET_PROXY_URL ? null : pickCricketKey(tried);
       if(!CRICKET_PROXY_URL && !useKey) throw new Error(tried.length ? lastErr + (cricketKeys.length > 1 ? " — all " + cricketKeys.length + " keys are used up or failing" : "") : "all keys are used up for today");
-      var res = await fetch(CRICKET_PROXY_URL || ("https://api.cricapi.com/v1/" + path + (path.indexOf("?") > -1 ? "&" : "?") + "apikey=" + encodeURIComponent(useKey)));
+      var res = await fetchT(CRICKET_PROXY_URL || ("https://api.cricapi.com/v1/" + path + (path.indexOf("?") > -1 ? "&" : "?") + "apikey=" + encodeURIComponent(useKey)));
       var body = await res.json();
       recordKeyInfo(useKey, body.info);
       if(body.status === "success") return body;
       lastErr = body.message || body.reason || "API rejected the request";
       if(!useKey) throw new Error(lastErr);
-      if(soft && !/hit|limit|block|key|quota|plan/i.test(lastErr)) throw new Error(lastErr);
+      if(soft && !/hit|limit|block|key|quota|plan/i.test(lastErr)){ var apiErr = new Error(lastErr); apiErr.apiFail = true; throw apiErr; }
       // quota used up or key rejected: park this key and try the next one straight away
       markKeyExhausted(useKey, lastErr);
       tried.push(useKey);
@@ -3659,7 +3695,10 @@
     var body = null;
     if(!scorecardMissing[m.cricapiId]){
       try { body = await cricapiGet("match_scorecard?id=" + encodeURIComponent(m.cricapiId), true); }
-      catch(e){ if(!/hit|limit|block|key|quota|plan/i.test(e.message)) scorecardMissing[m.cricapiId] = true; else throw e; }
+      catch(e){
+        // only CricAPI saying "no scorecard for this match" switches to match_info; a timeout just skips this refresh
+        if(e.apiFail) scorecardMissing[m.cricapiId] = true; else throw e;
+      }
     }
     if(!body) body = await cricapiGet("match_info?id=" + encodeURIComponent(m.cricapiId));
     var raw = body.data;
@@ -4452,7 +4491,7 @@
     for(;;){
       var k = pickCbKey(tried);
       if(!k) throw new Error(cbKeys.length ? "no requests left today" : "no key");
-      var res = await fetch("https://" + CB_HOST + path, {headers: {"x-rapidapi-key": k, "x-rapidapi-host": CB_HOST}});
+      var res = await fetchT("https://" + CB_HOST + path, {headers: {"x-rapidapi-key": k, "x-rapidapi-host": CB_HOST}}, 10000);
       var left = res.headers.get("x-ratelimit-requests-remaining");
       if(res.status === 429 || res.status === 401 || res.status === 403){
         // over quota or key rejected: park it for an hour and try the next key
