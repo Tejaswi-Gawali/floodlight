@@ -3497,7 +3497,8 @@
     if(!cricketRealMatches.length){ el.textContent = "Demo data — add a CricAPI or Cricbuzz key in Settings for real matches"; return; }
     var fromCb = cricketRealMatches.filter(function(m){ return m._src === "cricbuzz"; }).length;
     var src = fromCb === cricketRealMatches.length ? "Cricbuzz" : fromCb ? "CricAPI + Cricbuzz" : "CricAPI";
-    var ms = !fromCb && cricketRefreshEveryMs ? cricketRefreshEveryMs : CB_POLL_MS;
+    var onScreen = findActiveMatch();
+    var ms = onScreen && onScreen._src !== "cricbuzz" && cricketRefreshEveryMs ? cricketRefreshEveryMs : CB_POLL_MS;
     var every = ms < 60000 ? Math.round(ms / 1000) + " sec" : Math.round(ms / 60000 * 10) / 10 + " min";
     el.textContent = cricketRealMatches.length + " real live match(es) via " + src + " · refreshing every " + every;
   }
@@ -4676,7 +4677,7 @@
     });
     cricketRealMatches = base.concat(extra);
     if(cbLinked){ cbLinked = false; setTimeout(cbKickIfMissing, 0); }
-    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); holdBestScore(m); if(!applyCricapiLive(m)) catchUpBalls(m); applyCbTeams(m); });
+    cricketRealMatches.forEach(function(m){ applyCricbuzz(m, cbFreshData(m)); applyManualScoring(m); holdBestScore(m); if(!applyCricapiLive(m)) catchUpBalls(m); holdBatterFigures(m); applyCbTeams(m); });
     if(!cricketRealMatches.length) return;
     // keep showing the same fixture if it moves from one source to the other
     var same = prev && cricketRealMatches.filter(function(m){ return cbSameTeams(m.teamA, m.teamB, prev.teamA, prev.teamB); })[0];
@@ -4872,6 +4873,7 @@
             applyCricbuzz(m, parsed);
             holdBestScore(m);
             if(!applyCricapiLive(m)) catchUpBalls(m);
+            holdBatterFigures(m);
             cbFetchTeams(m, cbId);
             applyCbTeams(m);
             renderCricket();
@@ -5174,68 +5176,79 @@
       bowl.push({name: n, o: b.o, balls: oversToBalls(b.o), m: +b.m || 0, r: +b.r || 0, w: +b.w || 0,
         eco: +b.eco || 0, wd: +b.wd || 0, nb: +b.nb || 0});
     });
-    return {inn: score.length, balls: oversToBalls(last.o), runs: +last.r || 0, wkts: +last.w || 0, bat: bat, bowl: bowl};
+    var bowlBalls = bowl.reduce(function(t, b){ return t + b.balls; }, 0);
+    return {inn: score.length, balls: oversToBalls(last.o), runs: +last.r || 0, wkts: +last.w || 0, bat: bat, bowl: bowl, bowlBalls: bowlBalls};
   }
   function byName(list){ var o = {}; list.forEach(function(x){ o[x.name] = x; }); return o; }
 
   function trackCricapiBalls(id, raw){
     var s = scorecardSnap(raw);
-    if(!s.bat.length) return;
     var L = cricapiLive[id];
     if(!L || L.inn !== s.inn){
-      L = cricapiLive[id] = {inn: s.inn, seq: [], snap: null, striker: null, bowler: null, box: [], boxAt: 0};
+      L = cricapiLive[id] = {inn: s.inn, seq: [], snap: null, striker: null, bowler: null, box: [], boxAt: 0, batters: [], bowl: {}, fresh: false};
     }
     var p = L.snap;
-    var notOut = s.bat.filter(function(b){ return !b.out; });
-    L.batters = notOut.slice(-2);
-    if(p && (s.balls < p.balls || (s.balls === p.balls && s.runs < p.runs))) return;   // older snapshot: ignore
-    var pb = p ? byName(p.bat) : {}, pw = p ? byName(p.bowl) : {};
+    if(p && (s.balls < p.balls || (s.balls === p.balls && s.runs < p.runs) || s.wkts < p.wkts)) return;   // older snapshot: ignore
+    // CricAPI's player figures sometimes lag behind its own score: only trust them when the bowling adds up to the score
+    var fresh = s.bat.length > 0 && s.bowlBalls === s.balls;
+    s.fresh = fresh;
+    var both = fresh && p && p.fresh;
+    var pb = both ? byName(p.bat) : {}, pw = both ? byName(p.bowl) : {};
 
-    // who bowled since the last snapshot
-    var moved = s.bowl.filter(function(b){ var o = pw[b.name]; return !o || b.balls > o.balls || b.r > o.r || b.wd > o.wd || b.nb > o.nb; });
-    if(moved.length) L.bowler = moved[moved.length - 1].name;
-    else if(!L.bowler){
-      var part = s.bowl.filter(function(b){ return b.balls % 6; });
-      L.bowler = (part.length ? part[part.length - 1] : s.bowl[s.bowl.length - 1] || {}).name || null;
+    if(fresh){
+      L.batters = s.bat.filter(function(b){ return !b.out; }).slice(-2);
+      L.bowl = byName(s.bowl);
+      var moved = both ? s.bowl.filter(function(b){ var o = pw[b.name]; return !o || b.balls > o.balls || b.r > o.r || b.wd > o.wd || b.nb > o.nb; }) : [];
+      if(moved.length) L.bowler = moved[moved.length - 1].name;
+      else if(!both){
+        var part = s.bowl.filter(function(b){ return b.balls % 6; });
+        L.bowler = (part.length ? part[part.length - 1] : s.bowl[s.bowl.length - 1] || {}).name || L.bowler;
+      }
     }
 
     if(p){
-      var adv = s.balls - p.balls;
-      var newOuts = s.bat.filter(function(b){ return b.out && !(pb[b.name] && pb[b.name].out); });
-      var outs = newOuts.length;
-      if(outs){ var lo = newOuts[newOuts.length - 1]; L.lastOut = {name: lo.name, r: lo.r, b: lo.b, how: lo.how, wkts: s.wkts}; }
-      var fours = 0, sixes = 0, batRuns = 0, faced = [];
-      s.bat.forEach(function(b){
-        var o = pb[b.name] || {r:0, b:0, f:0, s:0};
-        fours += Math.max(b.f - o.f, 0); sixes += Math.max(b.s - o.s, 0); batRuns += Math.max(b.r - o.r, 0);
-        if(b.b > o.b) faced.push({name: b.name, runs: b.r - o.r});
-      });
-      var wd = 0, nb = 0;
-      s.bowl.forEach(function(b){ var o = pw[b.name] || {wd:0, nb:0}; wd += Math.max(b.wd - o.wd, 0); nb += Math.max(b.nb - o.nb, 0); });
-      var extras = Math.max((s.runs - p.runs) - batRuns, 0);
-      var toks = [];
-      if(adv === 0 && (wd || nb || s.runs > p.runs)){
-        // only extras (a wide or a no-ball) since the last look
-        if(wd) toks.push({tok: extras > 1 ? (extras - 1) + "wd" : "wd", legal: false});
-        else if(nb) toks.push({tok: (batRuns ? batRuns : "") + "nb", legal: false});
-      } else if(adv === 1){
-        var t;
-        if(outs) t = "W";
-        else if(wd) { toks.push({tok: "wd", legal: false}); t = String(batRuns); }
-        else if(nb) { toks.push({tok: (batRuns ? batRuns : "") + "nb", legal: false}); t = "0"; }
-        else if(extras && !batRuns) t = extras + "lb";
-        else t = String(batRuns);
-        toks.push({tok: t, legal: true});
-      } else if(adv > 1){
-        // several balls at once: we know the wickets and boundaries, not their exact order
-        var known = [];
-        for(var i = 0; i < outs; i++) known.push("W");
-        for(i = 0; i < fours; i++) known.push("4");
-        for(i = 0; i < sixes; i++) known.push("6");
-        var rest = Math.max(adv - known.length, 0);
-        var restRuns = Math.max(batRuns - fours * 4 - sixes * 6, 0);
-        for(i = 0; i < rest; i++) toks.push({tok: rest === restRuns ? "1" : restRuns === 0 ? "0" : "•", legal: true});
-        known.forEach(function(k){ toks.push({tok: k, legal: true}); });
+      var adv = s.balls - p.balls, wk = s.wkts - p.wkts, runs = s.runs - p.runs, toks = [], i;
+      var faced = [], outs = 0, fours = 0, sixes = 0, batRuns = 0;
+      if(both){
+        var newOuts = s.bat.filter(function(b){ return b.out && !(pb[b.name] && pb[b.name].out); });
+        outs = newOuts.length;
+        if(outs){ var lo = newOuts[newOuts.length - 1]; L.lastOut = {name: lo.name, r: lo.r, b: lo.b, how: lo.how, wkts: s.wkts}; }
+        s.bat.forEach(function(b){
+          var o = pb[b.name] || {r:0, b:0, f:0, s:0};
+          fours += Math.max(b.f - o.f, 0); sixes += Math.max(b.s - o.s, 0); batRuns += Math.max(b.r - o.r, 0);
+          if(b.b > o.b) faced.push({name: b.name, runs: b.r - o.r});
+        });
+        var wd = 0, nb = 0;
+        s.bowl.forEach(function(b){ var o = pw[b.name] || {wd:0, nb:0}; wd += Math.max(b.wd - o.wd, 0); nb += Math.max(b.nb - o.nb, 0); });
+        var extras = Math.max(runs - batRuns, 0);
+        if(adv === 0 && (wd || nb || runs > 0)){
+          if(wd) toks.push({tok: extras > 1 ? (extras - 1) + "wd" : "wd", legal: false});
+          else if(nb) toks.push({tok: (batRuns ? batRuns : "") + "nb", legal: false});
+        } else if(adv === 1){
+          var t;
+          if(outs) t = "W";
+          else if(wd) { toks.push({tok: "wd", legal: false}); t = String(batRuns); }
+          else if(nb) { toks.push({tok: (batRuns ? batRuns : "") + "nb", legal: false}); t = "0"; }
+          else if(extras && !batRuns) t = extras + "lb";
+          else t = String(batRuns);
+          toks.push({tok: t, legal: true});
+        } else if(adv > 1){
+          // several balls at once: we know the wickets and boundaries, not their exact order
+          var known = [];
+          for(i = 0; i < outs; i++) known.push("W");
+          for(i = 0; i < fours; i++) known.push("4");
+          for(i = 0; i < sixes; i++) known.push("6");
+          var rest = Math.max(adv - known.length, 0), restRuns = Math.max(batRuns - fours * 4 - sixes * 6, 0);
+          for(i = 0; i < rest; i++) toks.push({tok: rest === restRuns ? "1" : restRuns === 0 ? "0" : "•", legal: true});
+          known.forEach(function(k){ toks.push({tok: k, legal: true}); });
+        }
+      } else if(adv >= 1){
+        // player figures not usable: work from the team total (runs and wickets) only
+        if(adv === 1) toks.push({tok: wk > 0 ? "W" : ([0, 1, 2, 3, 4, 6].indexOf(runs) > -1 ? String(runs) : "•"), legal: true});
+        else {
+          for(i = 0; i < adv - Math.max(wk, 0); i++) toks.push({tok: "•", legal: true});
+          for(i = 0; i < wk; i++) toks.push({tok: "W", legal: true});
+        }
       }
       var at = p.balls;
       toks.forEach(function(t){
@@ -5245,47 +5258,78 @@
       // the box shows the new balls one after another (a four and then a six both get their moment)
       var shown = toks.map(function(t){ return t.tok; }).filter(function(t){ return t !== "•"; });
       if(adv > 1) shown = shown.filter(function(t){ return /^(W|4|6)$/.test(t); });
-      if(toks.length){
-        L.box = shown.length ? shown : ["—"];
-        L.boxAt = Date.now();
-        L.boxBalls = s.balls;
-      }
-      // strike: the batter who faced the last ball, swapped after an odd run or at the end of the over
-      if(adv >= 1 && faced.length === 1){
-        var facedName = faced[0].name;
-        var otherB = L.batters.filter(function(b){ return b.name !== facedName; })[0];
-        var onStrike = facedName;
-        if(adv === 1 && otherB && toks.length && /^[13]$/.test(toks[toks.length - 1].tok)) onStrike = otherB.name;   // ran an odd number
-        if(s.balls % 6 === 0 && otherB) onStrike = onStrike === facedName ? otherB.name : facedName;              // ends change after the over
+      if(toks.length){ L.box = shown.length ? shown : ["—"]; L.boxAt = Date.now(); L.boxBalls = s.balls; }
+
+      // strike
+      var names = (L.batters || []).map(function(b){ return b.name; });
+      var other = function(n){ return names.filter(function(x){ return x !== n; })[0]; };
+      if(both && adv >= 1 && faced.length === 1){
+        var facedName = faced[0].name, onStrike = facedName, ob = other(facedName);
+        if(adv === 1 && ob && toks.length && /^[13]$/.test(toks[toks.length - 1].tok)) onStrike = ob;   // ran an odd number
+        if(s.balls % 6 === 0 && ob) onStrike = onStrike === facedName ? ob : facedName;              // ends change after the over
         L.striker = onStrike;
+      } else if(!both && adv === 1 && L.striker && wk <= 0){
+        if(runs % 2 === 1 && other(L.striker)) L.striker = other(L.striker);
+        if(s.balls % 6 === 0 && other(L.striker)) L.striker = other(L.striker);
       }
-      if(outs){
-        var gone = L.striker && !L.batters.some(function(b){ return b.name === L.striker; });
-        if(gone) L.striker = (L.batters[L.batters.length - 1] || {}).name || null;
-      }
+      if(outs && L.striker && names.indexOf(L.striker) === -1) L.striker = names[names.length - 1] || null;
     }
-    if(!L.striker || !L.batters.some(function(b){ return b.name === L.striker; })) L.striker = (L.batters[0] || {}).name || null;
-    L.snap = s;
+    if(fresh && (!L.striker || !L.batters.some(function(b){ return b.name === L.striker; }))) L.striker = (L.batters[0] || {}).name || null;
+    L.snap = s; L.fresh = fresh;
     L.balls = s.balls; L.runs = s.runs; L.wkts = s.wkts;
-    L.bowl = byName(s.bowl);
     if(L.seq.length > 60) L.seq = L.seq.slice(-60);
+  }
+
+  // strike after Cricbuzz's last ball: swap after odd runs and at the end of each over we've worked out since
+  function rotateStrike(L, onName, offName, fromBalls){
+    var on = onName, off = offName;
+    L.seq.filter(function(e){ return e.legal && e.idx > fromBalls; }).sort(function(a, b){ return a.idx - b.idx; }).forEach(function(e){
+      var r = parseInt(e.tok, 10);
+      if(!isNaN(r) && r % 2 === 1){ var x = on; on = off; off = x; }
+      if(e.idx % 6 === 0){ var y = on; on = off; off = y; }
+    });
+    return on;
   }
 
   var boxTimer = null;
   var BOX_STEP_MS = 2600;
   function applyCricapiLive(m){
     var L = m && !m.isDemo && cricapiLive[m.cricapiId];
-    if(!L || L.inn !== (m.allInnings || []).length || !L.batters || !L.batters.length) return false;
+    if(!L || L.inn !== (m.allInnings || []).length || !L.snap) return false;
     var cb = cbFreshData(m);
     var cbBalls = cb && cb.score && cb.innings === L.inn ? cb.score.balls : -1;
-    if(cbBalls > L.balls) return false;          // Cricbuzz is further on: its details win
+    // Cricbuzz at the same ball or further on: its batters, bowler and strike are exact, so they win.
+    // (CricAPI's scorecard sometimes moves the team score before the batter figures.)
+    if(cbBalls >= L.balls) return false;
 
-    // batters: keep each one in the same card, figures from the newest snapshot
+    // exactly one ball past Cricbuzz: that ball is the difference between the two totals
+    if(cb && cb.score && cbBalls >= 0 && L.balls - cbBalls === 1){
+      var dRuns = L.runs - cb.score.runs, dWk = L.wkts - cb.score.wkts;
+      var oneTok = dWk === 1 && dRuns === 0 ? "W" : dWk === 0 && [0, 1, 2, 3, 4, 6].indexOf(dRuns) > -1 ? String(dRuns) : null;
+      if(oneTok){
+        L.seq.forEach(function(e){ if(e.legal && e.idx === L.balls) e.tok = oneTok; });
+        if(L.boxBalls === L.balls && L.box && L.box.length <= 1) L.box = [oneTok];
+      }
+    }
+
+    var useOwnPlayers = L.batters && L.batters.length && (L.fresh || !cb || !cb.striker);
+    if(!useOwnPlayers){
+      // CricAPI's player figures lag behind its score: keep Cricbuzz's players, just move the strike on
+      if(cb && cb.striker && cb.nonStriker){
+        var sn = rotateStrike(L, cb.striker.name, cb.nonStriker.name, cbBalls);
+        (m.batters || []).forEach(function(b){ if(b) b.strike = cbNameKey(b.name) === cbNameKey(sn); });
+      }
+      if(cb && cb.bowler) m.bowler = cb.bowler;
+    } else {
+    // CricAPI is ahead: its figures, but never older than what Cricbuzz already had for the same player
+    var cbBat = {};
+    if(cb){ [cb.striker, cb.nonStriker].forEach(function(b){ if(b && b.name) cbBat[cbNameKey(b.name)] = b; }); }
     var cur = L.batters.map(function(b){
-      return {name: b.name, stat: b.r + " (" + b.b + ")", fours: b.f, six: b.s, sr: b.b ? +(b.r * 100 / b.b).toFixed(1) : 0};
+      var r = b.r, bb = b.b, f = b.f, sx = b.s, o = cbBat[cbNameKey(b.name)];
+      if(o && (o.balls > bb || (o.balls === bb && o.runs > r))){ r = o.runs; bb = o.balls; f = o.fours; sx = o.six; }
+      return {name: b.name, stat: r + " (" + bb + ")", fours: f, six: sx, sr: bb ? +(r * 100 / bb).toFixed(1) : 0};
     });
-    var useCbStrike = cb && cbBalls === L.balls && cb.striker;
-    var strikeName = useCbStrike ? cb.striker.name : L.striker;
+    var strikeName = L.fresh || !cb || !cb.striker ? L.striker : rotateStrike(L, cb.striker.name, (cb.nonStriker || {}).name, cbBalls);
     var prevOrder = (m.batters || []).map(function(b){ return cbNameKey(b.name); });
     var cards = [null, null];
     cur.forEach(function(b){ var i = prevOrder.indexOf(cbNameKey(b.name)); if(i > -1 && i < 2 && !cards[i]) cards[i] = b; });
@@ -5295,11 +5339,14 @@
       b.strike = cbNameKey(b.name) === cbNameKey(strikeName);
       return b;
     });
-    if(L.bowler && L.bowl[L.bowler]){
-      var w = L.bowl[L.bowler];
-      m.bowler = {name: w.name, stat: w.o + "-" + w.m + "-" + w.r + "-" + w.w, econ: w.eco};
+    // bowler: within the same over as Cricbuzz, it's still Cricbuzz's bowler
+    var sameOver = cb && cb.bowler && cbBalls >= 0 && cbBalls % 6 !== 0 && Math.floor(cbBalls / 6) === Math.floor((L.balls - 1) / 6);
+    var bowlName = sameOver ? cb.bowler.name : L.bowler;
+    var w = null;
+    Object.keys(L.bowl || {}).forEach(function(n){ if(cbNameKey(n) === cbNameKey(bowlName)) w = L.bowl[n]; });
+    if(w) m.bowler = {name: w.name, stat: w.o + "-" + w.m + "-" + w.r + "-" + w.w, econ: w.eco};
+    else if(sameOver) m.bowler = cb.bowler;
     }
-    if(cbBalls === L.balls) return true;          // same ball: Cricbuzz's own last ball and overs stay
 
     // recent overs: Cricbuzz's exact balls, then the balls we worked out since
     function cbOver(n){
@@ -5347,6 +5394,20 @@
       cbTimer = setTimeout(cbTick, 1500);
     }
     return true;
+  }
+
+  var batBest = {};
+  function holdBatterFigures(m){
+    if(!m || m.isDemo || !m.batters) return;
+    var key = m.id + ":" + (m.allInnings || []).length;
+    var best = batBest[key] || (batBest[key] = {});
+    m.batters.forEach(function(b){
+      if(!b || !b.name || b.name === "—") return;
+      var ps = parseBatStat(b.stat), r = +ps.runs || 0, bb = +ps.balls || 0, k = cbNameKey(b.name), o = best[k];
+      if(o && (o.b > bb || (o.b === bb && o.r > r))){
+        b.stat = o.r + " (" + o.b + ")"; b.fours = o.f; b.six = o.s; b.sr = o.b ? +(o.r * 100 / o.b).toFixed(1) : 0;
+      } else best[k] = {r: r, b: bb, f: b.fours, s: b.six};
+    });
   }
 
   /* ---------------- playing XI from Cricbuzz (one request per match) ---------------- */
