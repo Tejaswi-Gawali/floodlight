@@ -1014,17 +1014,33 @@
     box-shadow:0 10px 22px rgba(0,0,0,0.55);
   }
   .bcast-player-card.bowl{background:linear-gradient(100deg,#071d52 0%,#1447a8 45%,#2f7bf0 100%);}
+  /* the batter on strike: gold frame, glow, lifted card, shine, "ON STRIKE" badge; the other batter dims */
+  .bcast-player-card.bat{transition:transform .35s ease, filter .35s ease, border-color .35s ease;}
   .bcast-player-card.on-strike{
-    border-color:var(--six);
-    animation:strike-pulse 1.8s ease-in-out infinite;
+    border:3px solid #ffd54a;transform:translateY(-4px) scale(1.03);z-index:2;
+    animation:strike-pulse 1.6s ease-in-out infinite;
   }
   @keyframes strike-pulse{
-    0%,100%{box-shadow:0 0 10px rgba(231,184,74,0.35);}
-    50%{box-shadow:0 0 18px rgba(231,184,74,0.65);}
+    0%,100%{box-shadow:0 0 12px rgba(255,213,74,0.45), 0 10px 22px rgba(0,0,0,0.55);}
+    50%{box-shadow:0 0 30px rgba(255,213,74,0.95), 0 10px 22px rgba(0,0,0,0.55);}
   }
+  .bcast-player-card.on-strike::after{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+    background:linear-gradient(105deg, transparent 35%, rgba(255,240,180,0.38) 50%, transparent 65%);
+    transform:translateX(-120%);animation:strike-shine 3.4s ease-in-out infinite;
+  }
+  @keyframes strike-shine{0%,55%{transform:translateX(-120%);} 100%{transform:translateX(120%);}}
+  .bcast-player-card.on-strike .role-tag{
+    background:#ffd54a;color:#3a1600;padding:3px 10px 1px;border-radius:12px;box-shadow:0 0 12px rgba(255,213,74,0.7);
+  }
+  .bcast-player-card.on-strike .role-tag::before{content:"● ";color:#d4141c;animation:strike-dot 1s steps(2) infinite;}
+  @keyframes strike-dot{50%{opacity:0.2;}}
+  .bcast-players-row.has-strike .bcast-player-card.bat:not(.on-strike){filter:brightness(0.7) saturate(0.75);}
+  .bcast-players-row.has-strike .bcast-player-card.bat:not(.on-strike) .card-bat svg{animation:none;transform:rotate(30deg);}
   @media (prefers-reduced-motion: reduce){
     .bcast-player-card.on-strike{animation:none;}
     .bcast-player-card.on-strike.new-player{animation:none;}
+    .bcast-player-card.on-strike::after, .bcast-player-card.on-strike .role-tag::before{animation:none;}
   }
   .bcast-player-card.on-strike.new-player{
     animation:card-slide-in 0.6s ease, strike-pulse 1.8s ease-in-out infinite;
@@ -2911,6 +2927,8 @@
     $("bcName1").textContent = b0.name + (b0.strike ? " *" : "");
     $("bcName1").classList.toggle("long", b0.name.length > 12);
     $("bcCard1").classList.toggle("on-strike", !!b0.strike);
+    $("bcCard1").querySelector(".role-tag").textContent = b0.strike ? "On strike" : "Batter";
+    $("bcCard1").parentNode.classList.toggle("has-strike", !!(b0.strike || b1.strike));
     $("bcScore1").textContent = s0.runs;
     $("bcBalls1").textContent = "(" + s0.balls + ")";
     $("bc4s1").textContent = b0.fours!=null ? b0.fours : "0";
@@ -2922,6 +2940,7 @@
     $("bcName2").textContent = b1.name + (b1.strike ? " *" : "");
     $("bcName2").classList.toggle("long", b1.name.length > 12);
     $("bcCard2").classList.toggle("on-strike", !!b1.strike);
+    $("bcCard2").querySelector(".role-tag").textContent = b1.strike ? "On strike" : "Batter";
     $("bcScore2").textContent = s1.runs;
     $("bcBalls2").textContent = "(" + s1.balls + ")";
     $("bc4s2").textContent = b1.fours!=null ? b1.fours : "0";
