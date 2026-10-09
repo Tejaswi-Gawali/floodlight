@@ -893,6 +893,9 @@
   .rs-name{font-size:28px;font-weight:600;line-height:1.1;text-transform:uppercase;text-align:center;}
   .rs-fig{font-size:24px;color:#fff;}
   .sc-ctrls{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .se-log{margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);font-size:12px;line-height:1.5;max-height:140px;overflow:auto;}
+  .se-log[hidden]{display:none;}
+  .se-log .ok{color:#7cffb2;} .se-log .skip{color:#9aa4b8;}
   .sc-credits{font-size:12px;margin-top:6px;color:var(--muted);}
   .sc-credits.low{color:#ff8a8a;}
   body.scorer-mode .info-banner, body.scorer-mode .like-remind, body.scorer-mode .poll-box, body.scorer-mode .prematch{display:none !important;}
@@ -1981,6 +1984,8 @@
     <button class="btn secondary" id="seDisconnectBtn">Disconnect</button>
   </div>
   <div class="status-note" id="seNote">Not connected — type names by hand, or connect StreamElements.</div>
+  <div class="se-log" id="seLog" hidden></div>
+  <p style="font-size:12px;margin-top:6px;">To test: in StreamElements open <b>Activity feed</b> and use <b>Emulate → Subscriber</b>. If the test name appears on screen, everything works. Real YouTube subscribers only come through when their subscriptions are public.</p>
 
   <hr class="divider">
 
@@ -5050,14 +5055,25 @@
     return null;
   }
 
+  // every event StreamElements sends is listed under the token box, so it's easy to see what arrives
+  var seLogItems = [];
+  function seLogEvent(text, cls){
+    seLogItems.unshift('<div class="' + (cls || "") + '">' + esc(new Date().toLocaleTimeString()) + ' · ' + esc(text) + '</div>');
+    seLogItems = seLogItems.slice(0, 12);
+    var el = $("seLog");
+    if(el){ el.innerHTML = seLogItems.join(""); el.hidden = false; }
+  }
   function handleSeActivity(a){
-    if(!a || !/^(follow|subscriber|sponsor)$/.test(a.type)) return;
+    if(!a) return;
+    var d0 = a.data || {}, who = d0.displayName || d0.username || "?";
+    if(!/^(follow|subscriber|sponsor)$/.test(a.type)){ seLogEvent((a.type || "event") + " from " + who + " (" + (a.provider || "?") + ") — not a subscriber, ignored", "skip"); return; }
     var id = a._id || a.activityId || a.id;
     if(id){ if(seSeen[id]) return; seSeen[id] = true; }
     var created = Date.parse(a.createdAt);
-    if(created && Date.now() - created > SE_MAX_AGE_MS) return;
+    if(created && Date.now() - created > SE_MAX_AGE_MS){ seLogEvent(a.type + " from " + who + " — older than 2 hours, not shown", "skip"); return; }
     var d = a.data || {};
     var name = cleanSubName(d.displayName || d.username || "") || "A new viewer";
+    seLogEvent((a.type === "sponsor" ? "New member: " : "New subscriber: ") + name + " — shown on screen", "ok");
     // StreamElements reports a YouTube subscribe as "subscriber" (sometimes "follow"); a paid channel member is "sponsor"
     queueSubscribers([name], a.type === "sponsor" ? "member" : "sub");
   }
