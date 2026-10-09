@@ -3454,6 +3454,8 @@
       if(typeof pmCfg !== "undefined" && pmCfg && pmCfg.at && Date.now() > pmCfg.at - 10 * 60000 && Date.now() < pmCfg.at + 3 * 3600000) due = true;
       return due ? CRICKET_SLOW_POLL_MS : CRICKET_IDLE_POLL_MS;
     }
+    // the pre-match countdown is up: no score on screen, so just keep an eye out once a minute
+    if(prematchVisible()) return CRICKET_SLOW_POLL_MS;
     // no point asking every 10 s while play is stopped
     var am = findActiveMatch();
     if(am && !am.isDemo && !am.finished && am.cricapiId){
@@ -4667,7 +4669,7 @@
   }
 
   // live matches = CricAPI's list (while it's fresh) + any match only Cricbuzz has
-  var cbLinked = false;
+  var cbLinked = false, seenFixtures = {}, firstRebuildDone = false;
   function rebuildRealMatches(silent){
     var prev = cricketRealMatches.filter(function(m){ return m.id === activeId; })[0];
     var base = Date.now() - cricapiAt < 4 * 60000 ? cricapiMatches : [];
@@ -4688,6 +4690,17 @@
     var same = prev && cricketRealMatches.filter(function(m){ return cbSameTeams(m.teamA, m.teamB, prev.teamA, prev.teamB); })[0];
     if(same) activeId = same.id;
     else if(!silent || !cricketRealMatches.some(function(m){ return m.id === activeId; })) activeId = pickDefaultMatch().id;
+    // a match that has just appeared takes over once if it's the countdown's match or a bigger one (e.g. senior India)
+    var cur = cricketRealMatches.filter(function(m){ return m.id === activeId; })[0];
+    cricketRealMatches.forEach(function(m){
+      var fk = [cbTeamKey(m.teamA), cbTeamKey(m.teamB)].sort().join("|");
+      if(seenFixtures[fk]) return;
+      seenFixtures[fk] = true;
+      if(!firstRebuildDone || m.finished || !cur || cur === m) return;
+      var isCountdown = typeof pmCfg !== "undefined" && pmCfg && pmCfg.t1 && cbSameTeams(m.teamA, m.teamB, pmCfg.t1, pmCfg.t2);
+      if(isCountdown || matchPriority(m) > matchPriority(cur)){ activeId = m.id; cur = m; }
+    });
+    firstRebuildDone = true;
   }
 
   // open on the senior India match first; age-group, A-team and women's sides and matches at stumps come after
