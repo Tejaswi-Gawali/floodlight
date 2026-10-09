@@ -4490,7 +4490,9 @@
 
   /* ---------------- Cricbuzz (RapidAPI): live batters, bowler, balls, commentary, win % ---------------- */
   var CB_HOST = "cricbuzz-cricket2.p.rapidapi.com";
-  var CB_POLL_MS = 60000;
+  var CB_POLL_MS = 30000;          // Cricbuzz ball-by-ball (players, recent balls) every 30 s...
+  var CB_SLOW_POLL_MS = 60000;     // ...once a minute when fewer than CB_LOW_LEFT requests are left today
+  var CB_LOW_LEFT = 80;
   var CB_LIST_EVERY_MS = 5 * 60000;    // re-read Cricbuzz's live list (new matches, other scores) every 5 min
   var CB_STALE_MS = 5 * 60000;         // older player data than this isn't shown
   var cbKeys = [], cbQuota = {}, cbIdFor = {}, cbData = {}, cbSlots = {};
@@ -4908,7 +4910,11 @@
     }
     renderCbNote();
     // with no Cricbuzz requests left, check back less often
-    cbTimer = setTimeout(cbTick, cbRequestsLeft() > 0 ? CB_POLL_MS : 30 * 60000);
+    var cbLeft = cbRequestsLeft();
+    var am = findActiveMatch();
+    // no live match on screen (or the countdown is up): no need to ask every 30 s
+    var idle = !am || am.isDemo || am.finished || (typeof prematchVisible === "function" && prematchVisible());
+    cbTimer = setTimeout(cbTick, cbLeft <= 0 ? 30 * 60000 : idle || cbLeft < CB_LOW_LEFT ? CB_SLOW_POLL_MS : CB_POLL_MS);
   }
 
   // a live match just appeared but Cricbuzz has nothing for it yet: check now instead of waiting a minute
