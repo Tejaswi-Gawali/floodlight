@@ -3713,6 +3713,35 @@
   // so between list refreshes the match on screen is read straight from match_info
   var CRICAPI_LIST_EVERY_MS = 60000, cricapiListAt = 0, scorecardMissing = {};
   var RESULT_KEEP_MS = 45 * 60000, cricapiSeenLive = {}, cricapiEndedAt = {}, cricapiUpcoming = [];
+
+  // CricAPI lists 25 matches per page. On busy days (a full Ranji round) the match we want can be on page 2,
+  // so the other pages are read too: every 5 minutes, or every 2 minutes while a wanted match is still missing.
+  var cricapiMoreRows = [], cricapiMoreAt = 0;
+  function wantedMissing(rows){
+    var has = function(t1, t2){ return rows.some(function(r){ var tm = r.teams || []; return cbSameTeams(tm[0], tm[1], t1, t2); }); };
+    if(typeof pmCfg !== "undefined" && pmCfg && pmCfg.t1 && pmCfg.at && Date.now() > pmCfg.at - 60 * 60000 && Date.now() < pmCfg.at + 5 * 3600000 && !has(pmCfg.t1, pmCfg.t2)) return true;
+    var am = typeof findActiveMatch === "function" ? findActiveMatch() : null;
+    return !!(am && !am.isDemo && am._src === "cricbuzz" && !has(am.teamA, am.teamB));
+  }
+  async function withOtherPages(first){
+    var rows = (first.data || []).slice();
+    var total = (first.info && +first.info.totalRows) || rows.length;
+    if(total <= rows.length || CRICKET_PROXY_URL){ cricapiMoreRows = []; return rows; }
+    var age = Date.now() - cricapiMoreAt;
+    if(age > 5 * 60000 || (age > 2 * 60000 && wantedMissing(rows.concat(cricapiMoreRows)))){
+      var more = [];
+      for(var off = rows.length; off < total && off < 125; off += 25){
+        try { var pj = await cricapiGet("currentMatches?offset=" + off); more = more.concat(pj.data || []); }
+        catch(e){ break; }
+      }
+      cricapiMoreRows = more;
+      cricapiMoreAt = Date.now();
+    }
+    var ids = {};
+    rows.forEach(function(r){ ids[r.id] = true; });
+    cricapiMoreRows.forEach(function(r){ if(!ids[r.id]){ ids[r.id] = true; rows.push(r); } });
+    return rows;
+  }
   async function fetchActiveMatchInfo(){
     var m = findActiveMatch();
     if(!m || m.isDemo || m.finished || m._src === "cricbuzz" || !m.cricapiId) return false;
@@ -3757,6 +3786,7 @@
       }
       var json = await cricapiGet("currentMatches?offset=0");
       cricapiListAt = Date.now();
+      json = {data: await withOtherPages(json), info: json.info};
       cricapiUpcoming = (json.data || []).filter(function(x){
         var t = matchStartMs(x.dateTimeGMT);
         return !x.matchStarted && t && t > Date.now() - 3600000 && t < Date.now() + 3 * 86400000;
