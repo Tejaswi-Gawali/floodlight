@@ -3456,6 +3456,9 @@
     }
     // the pre-match countdown is up: no score on screen, so just keep an eye out once a minute
     if(prematchVisible()) return CRICKET_SLOW_POLL_MS;
+    // CricAPI hasn't started scoring this match yet: Cricbuzz keeps it moving, so only check CricAPI once a minute
+    var amx = findActiveMatch();
+    if(amx && !amx.isDemo && amx._noCricapiScore && amx._src !== "cricbuzz") return CRICKET_SLOW_POLL_MS;
     // no point asking every 10 s while play is stopped
     var am = findActiveMatch();
     if(am && !am.isDemo && !am.finished && am.cricapiId){
@@ -3505,7 +3508,7 @@
     var fromCb = cricketRealMatches.filter(function(m){ return m._src === "cricbuzz"; }).length;
     var src = fromCb === cricketRealMatches.length ? "Cricbuzz" : fromCb ? "CricAPI + Cricbuzz" : "CricAPI";
     var onScreen = findActiveMatch();
-    var ms = onScreen && onScreen._src !== "cricbuzz" && cricketRefreshEveryMs ? cricketRefreshEveryMs : CB_POLL_MS;
+    var ms = onScreen && onScreen._src !== "cricbuzz" && !onScreen._noCricapiScore && cricketRefreshEveryMs ? cricketRefreshEveryMs : CB_POLL_MS;
     var every = ms < 60000 ? Math.round(ms / 1000) + " sec" : Math.round(ms / 60000 * 10) / 10 + " min";
     el.textContent = cricketRealMatches.length + " real live match(es) via " + src + " · refreshing every " + every;
   }
@@ -3573,7 +3576,7 @@
       bowler:{name:"—",stat:""}, thisOver:[], prevOver:[], partnership:null, lastWicket:null, winProb:null,
       scorecards: (scorecardCache[m.id] && scorecardCache[m.id].data) || {}, squads: squadCache[m.id] || null,
       finished: !!m.matchEnded, cricapiId: m.id, fantasyEnabled: !!m.fantasyEnabled, hasSquad: !!m.hasSquad, venue: m.venue || "",
-      allInnings: scores
+      allInnings: scores, _noCricapiScore: !scores.length
     };
   }
 
@@ -4581,6 +4584,11 @@
       });
     });
     var list = entries.map(function(e){ return e.info; });
+    entries.forEach(function(e){
+      var t1 = e.info.team1 || {}, t2 = e.info.team2 || {}, ids = {};
+      ids[t1.teamId] = t1.teamName; ids[t2.teamId] = t2.teamName;
+      cbTeamNames[e.info.matchId] = ids;
+    });
     cbListMatches = entries.filter(cbIsLive).map(cbToMatch);
     // Indian fixtures first, otherwise Cricbuzz's own order (internationals first)
     cbListMatches.sort(function(a, b){ return /india/i.test(b.teamA + b.teamB) - /india/i.test(a.teamA + a.teamB); });
@@ -4747,7 +4755,7 @@
     return cricketRealMatches.reduce(function(best, m){ return matchPriority(m) > matchPriority(best) ? m : best; }, cricketRealMatches[0]);
   }
 
-  var cbListTimer = null, cbInnSeen = {}, cbSeenLive = {}, cbEndedAt = {};
+  var cbListTimer = null, cbInnSeen = {}, cbSeenLive = {}, cbEndedAt = {}, cbTeamNames = {};
   async function cbDiscoverTick(){
     clearTimeout(cbListTimer);
     if(!cbKeys.length || SCORER_MODE) return;
@@ -4817,6 +4825,10 @@
     return {
       at: Date.now(),
       innings: inns.length,
+      allInns: inns.slice().sort(function(a, b){ return a.inningsid - b.inningsid; }).map(function(x){
+        return {teamId: x.batteamid, short: x.batteamshortname, r: x.runs || 0, w: x.wickets || 0,
+          balls: x.balls != null ? x.balls : oversToBalls(x.overs)};
+      }),
       score: cur ? {runs: cur.runs, wkts: cur.wickets, balls: legal} : null,
       striker: bat(ms.batsmanstriker), nonStriker: bat(ms.batsmannonstriker),
       bowler: bw && bw.name ? {name: bw.name, stat: bw.overs + "-" + (bw.maidens || 0) + "-" + (bw.runs || 0) + "-" + (bw.wickets || 0), econ: +bw.economy || 0} : null,
@@ -4872,6 +4884,36 @@
         m._lastFacedBatter = cb.comm.batter;
         m._commText = cbShowText ? cb.comm.text : undefined;
       }
+    }
+    // CricAPI has fewer innings than Cricbuzz (or no score at all yet, as at the start of a match): take the innings from Cricbuzz
+    if(cb.score && cb.allInns && cb.allInns.length > (m.allInnings || []).length){
+      var ids = cbTeamNames[cbIdFor[m.cricapiId]] || {};
+      var teamOf = function(x){
+        if(ids[x.teamId] && (cbSameTeams(ids[x.teamId], "", m.teamA, "") || cbSameTeams(ids[x.teamId], "", m.teamB, ""))) return cbSameTeams(ids[x.teamId], "", m.teamA, "") ? m.teamA : m.teamB;
+        var sh = String(x.short || "").toUpperCase();
+        if(sh && sh === teamCode(m.teamA).toUpperCase()) return m.teamA;
+        if(sh && sh === teamCode(m.teamB).toUpperCase()) return m.teamB;
+        return matchTeamFromInning(ids[x.teamId] || x.short || "", [m.teamA, m.teamB]);
+      };
+      var count = {};
+      m.allInnings = cb.allInns.map(function(x){
+        var t = teamOf(x);
+        count[t] = (count[t] || 0) + 1;
+        return {r: x.r, w: x.w, o: Math.floor(x.balls / 6) + (x.balls % 6 ? "." + x.balls % 6 : ""), inning: t + " Inning " + count[t]};
+      });
+      var lastInn = cb.allInns[cb.allInns.length - 1];
+      m.battingNow = teamOf(lastInn);
+      m.inningsOrder = [];
+      m.allInnings.forEach(function(x){ var t = matchTeamFromInning(x.inning, [m.teamA, m.teamB]); if(m.inningsOrder.indexOf(t) === -1) m.inningsOrder.push(t); });
+      [m.teamA, m.teamB].forEach(function(t){ if(m.inningsOrder.indexOf(t) === -1) m.inningsOrder.push(t); });
+      m.score = {runs: lastInn.r, wkts: lastInn.w, overs: m.allInnings[m.allInnings.length - 1].o};
+      m.crr = lastInn.balls ? +(lastInn.r * 6 / lastInn.balls).toFixed(2) : 0;
+      var lim = LIMITED_OVERS[m.matchType];
+      if(lim && m.allInnings.length >= 2){
+        m.target = (m.allInnings[0].r || 0) + 1;
+        m.ballsRemaining = Math.max(lim * 6 - lastInn.balls, 0);
+        m.rrr = m.ballsRemaining ? +(Math.max(m.target - lastInn.r, 0) * 6 / m.ballsRemaining).toFixed(2) : null;
+      } else { m.target = null; m.ballsRemaining = null; m.rrr = null; }
     }
     // Cricbuzz has already moved on to the next innings while CricAPI hasn't: start it here too (one-innings-a-side formats)
     var innNow = (m.allInnings || []).length, maxOv = LIMITED_OVERS[m.matchType];
