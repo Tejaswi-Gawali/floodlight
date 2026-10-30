@@ -2838,6 +2838,7 @@
     $("bcWinCodeB").textContent = codeB;
 
     renderInningsStrip(m, codeA, codeB);
+    applyTeamColors(m.battingNow || m.teamA, bowlingTeam);
 
     // between innings the other side isn't bowling any more: show the target they'll chase instead
     var fieldLabel = "Bowling";
@@ -6051,6 +6052,32 @@
   }
 
   var EXTRAS_READY = true;
+
+  /* ---------- team colours: a team keeps its colour on its panel, its player cards and its side of the win bar ---------- */
+  // dark → mid → light; "label" is the colour of the big BOWLING / TARGET word when that team is fielding
+  var TEAM_COLORS = {
+    "india":       {c1: "#8a3a00", c2: "#ff7a00", c3: "#c85a00", label: "#ffffff", labelShadow: "#5a2400"},
+    "new zealand": {c1: "#000000", c2: "#2b2b2b", c3: "#0d0d0d", label: "#ffab1f", labelShadow: "#000000"}
+  };
+  function teamColors(team){
+    var key = String(team || "").toLowerCase().replace(/\s*\b(women|men|u-?19|u-?23|a|xi)\b\s*$/i, "").trim();
+    return (TEAM_COLORS || {})[key] || null;   // the board's first draw happens before this table is set up
+  }
+  function paint(el, css){ if(el) el.style.background = css || ""; }
+  function applyTeamColors(batTeam, bowlTeam){
+    var a = teamColors(batTeam), b = teamColors(bowlTeam);
+    paint($("bcTeamA"), a ? "linear-gradient(100deg," + a.c1 + " 0%," + a.c2 + " 55%," + a.c3 + " 100%)" : "");
+    paint($("bcTeamB"), b ? "linear-gradient(260deg," + b.c1 + " 0%," + b.c2 + " 55%," + b.c3 + " 100%)" : "");
+    ["bcCard1", "bcCard2"].forEach(function(id){ paint($(id), a ? "linear-gradient(100deg," + a.c1 + " 0%," + a.c2 + " 45%," + a.c3 + " 100%)" : ""); });
+    paint($("bcCard3"), b ? "linear-gradient(100deg," + b.c1 + " 0%," + b.c2 + " 45%," + b.c3 + " 100%)" : "");
+    paint($("bcWinBarA"), a ? "linear-gradient(180deg," + a.c2 + "," + a.c1 + ")" : "");
+    paint($("bcWinBarB"), b ? "linear-gradient(180deg," + b.c2 + "," + b.c1 + ")" : "");
+    var lbl = $("bcFieldLabel");
+    if(lbl){
+      lbl.style.color = b && b.label ? b.label : "";
+      lbl.style.textShadow = b && b.labelShadow ? "0 3px 0 " + b.labelShadow + ", 0 0 16px rgba(0,0,0,0.35)" : "";
+    }
+  }
 
 })();
 </script>
