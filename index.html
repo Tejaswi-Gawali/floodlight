@@ -553,6 +553,7 @@
   .win-pill b{color:#fff !important;}
   .win-pill.a{background:linear-gradient(180deg,#e0303a,#9e1520);}
   .win-pill.b{background:linear-gradient(180deg,#2f7bf0,#1447a8);}
+  .win-pill.d{background:linear-gradient(180deg,#7b8794,#444d58);}
   .bcast-seg{
     flex:1;min-width:0;padding:8px 12px;
     font-family:"Teko",sans-serif;font-size:16px;color:#fff;
@@ -1684,6 +1685,7 @@
         <div class="bcast-seg win-seg">
           <div class="win-pills" id="bcWinBar" hidden>
             <div class="win-pill a" id="bcWinBarA"><span id="bcWinCodeA">—</span> <b id="bcWinA">0%</b></div>
+            <div class="win-pill d" id="bcWinBarD" hidden><span>DRAW</span> <b id="bcWinD">0%</b></div>
             <div class="win-pill b" id="bcWinBarB"><span id="bcWinCodeB">—</span> <b id="bcWinB">0%</b></div>
           </div>
         </div>
@@ -1816,7 +1818,7 @@
     </section>
 
     <section>
-      <div class="section-head"><h2 id="pointsTitle">Points table</h2><span class="section-sub">Top 4 qualify</span></div>
+      <div class="section-head"><h2 id="pointsTitle">Points table</h2><span class="section-sub" id="pointsSub">Top 4 qualify</span></div>
       <div class="card"><div class="table-scroll"><table class="min-w" id="pointsTable"></table></div></div>
     </section>
   </div>
@@ -2054,7 +2056,7 @@
   <div class="status-note" id="pollNote">Chat votes need StreamElements connected.</div>
 
   <label class="field-label" for="pmSelect" style="margin-top:16px;">Pre-match countdown screen</label>
-  <select class="field-input" id="pmSelect"><option value="">Pick an upcoming match (from CricAPI)…</option></select>
+  <select class="field-input" id="pmSelect"><option value="">Pick an upcoming match…</option></select>
   <div class="pm-grid">
     <input class="field-input" id="pmTeam1" placeholder="Team 1, e.g. India" maxlength="40" autocomplete="off">
     <input class="field-input" id="pmTeam2" placeholder="Team 2, e.g. Australia" maxlength="40" autocomplete="off">
@@ -2252,7 +2254,7 @@
         '<span class="comp">'+esc(m.comp)+'</span>' +
         '<span class="teams"><span class="dot-live" style="margin-right:6px;'+(m.isDemo?'background:var(--text-faint);animation:none;box-shadow:none;':'')+'"></span>'+esc(m.chip)+(m.isDemo?'<span class="demo-tag">demo</span>':'')+'</span>' +
         '<span class="sub">'+esc(m.sub)+'</span>';
-      chip.addEventListener("click", function(){ activeId = m.id; activeInnings = null; renderCricket(); });
+      chip.addEventListener("click", function(){ activeId = m.id; activeInnings = null; renderCricket(); cbKickNow(); });
       rail.appendChild(chip);
     });
   }
@@ -2730,7 +2732,7 @@
     "ireland":"ie","scotland":"gb-sct","wales":"gb-wls","netherlands":"nl","nepal":"np",
     "united arab emirates":"ae","uae":"ae","united states":"us","usa":"us","united states of america":"us",
     "oman":"om","namibia":"na","canada":"ca","papua new guinea":"pg","thailand":"th","japan":"jp",
-    "china":"cn","hong kong":"hk","malaysia":"my","singapore":"sg","kenya":"ke","uganda":"ug",
+    "china":"cn","hong kong":"hk","hong kong, china":"hk","malaysia":"my","singapore":"sg","kenya":"ke","uganda":"ug",
     "bermuda":"bm","jersey":"je","germany":"de","italy":"it","spain":"es","france":"fr",
     "denmark":"dk","norway":"no","israel":"il","qatar":"qa","kuwait":"kw","saudi arabia":"sa",
     "bahrain":"bh","brazil":"br","argentina":"ar","vanuatu":"vu","fiji":"fj","samoa":"ws"
@@ -2872,8 +2874,9 @@
       lbEl.parentNode.classList.toggle("lb-over", overDone);
     } else {
       lbEl.parentNode.classList.remove("lb-word", "lb-over");
-      lbEl.dataset.value = lastBall;
-      pulseText(lbEl, lastBall);
+      var shownBall = lastBall === "." ? "0" : lastBall;
+      lbEl.dataset.value = shownBall;
+      pulseText(lbEl, shownBall);
     }
     updateCommentary(m, lastBall, m._lastFacedBatter || (m.batters[0] && m.batters[0].name));
     updateTicker(m);
@@ -2915,11 +2918,15 @@
     $("bcStadium").classList.toggle("no-players", !hasPlayers);
     var winBar = $("bcWinBar");
     if(m.winProb){
+      var drawPct = m.winProb.drawPct || 0;
       $("bcWinA").textContent = m.winProb.batPct + "%";
       $("bcWinB").textContent = m.winProb.bowlPct + "%";
+      $("bcWinD").textContent = drawPct + "%";
+      $("bcWinBarD").hidden = !(drawPct > 0);
       winBar.hidden = false;
       $("bcWinBarA").style.flexBasis = m.winProb.batPct + "%";
       $("bcWinBarB").style.flexBasis = m.winProb.bowlPct + "%";
+      $("bcWinBarD").style.flexBasis = drawPct + "%";
     } else {
       $("bcWinA").textContent = "—";
       $("bcWinB").textContent = "—";
@@ -2966,23 +2973,29 @@
 
     if(celebType) triggerCelebration(celebType);
 
-    $("pointsTitle").textContent = (POINTS[m.comp] ? m.comp + " — Points table" : "Points table");
+    $("pointsTitle").textContent = pointsTitleFor(m);
   }
 
   function renderScorecard(m){
     var order = (m.inningsOrder && m.inningsOrder.length) ? m.inningsOrder : [m.teamA, m.teamB];
-    if(!activeInnings || order.indexOf(activeInnings)===-1) activeInnings = order[order.length-1];
+    // a tab per innings when there are more innings than teams (Tests / first-class), otherwise one per team
+    var inns = m.scorecards && m.scorecards.innings;
+    var perInnings = !!(inns && inns.length > order.length);
+    var entries = perInnings
+      ? inns.map(function(x, i){ return {key: "inn" + i, team: x.team, data: x.data}; })
+      : order.map(function(t){ return {key: t, team: t, data: m.scorecards && m.scorecards[t]}; });
+    if(!activeInnings || !entries.some(function(e){ return e.key === activeInnings; })) activeInnings = entries[entries.length-1].key;
     var tabs = $("inningsTabs");
     tabs.innerHTML = "";
-    order.forEach(function(teamName, idx){
+    entries.forEach(function(e, idx){
       var t = document.createElement("button");
-      t.className = "tab" + (teamName===activeInnings ? " active" : "");
-      t.textContent = "Innings " + (idx+1) + " · " + teamName;
-      t.addEventListener("click", function(){ activeInnings = teamName; renderScorecard(m); });
+      t.className = "tab" + (e.key===activeInnings ? " active" : "");
+      t.textContent = "Innings " + (idx+1) + " · " + e.team;
+      t.addEventListener("click", function(){ activeInnings = e.key; renderScorecard(m); });
       tabs.appendChild(t);
     });
 
-    var data = (m.scorecards && m.scorecards[activeInnings]) || {extras:"—", total:"", batting:[], bowling:[]};
+    var data = (entries.filter(function(e){ return e.key === activeInnings; })[0] || {}).data || {extras:"—", total:"", batting:[], bowling:[]};
     $("scorecardSub").textContent = data.total || "";
 
     var bt = $("battingTable");
@@ -3011,8 +3024,50 @@
     }
   }
 
+  /* ---- standings from Cricbuzz (one request per series, kept 30 minutes) ---- */
+  function cbPointsFor(m){
+    var cbId = m && cbIdFor[m.cricapiId], ser = cbId && cbSeriesOf[cbId];
+    var c = ser && cbPointsCache[ser.id];
+    if(!c || !c.groups || !c.groups.length) return null;
+    var hit = c.groups.filter(function(g){
+      return g.rows.some(function(r){ return cbTeamKey(r.team) === cbTeamKey(m.teamA) || cbTeamKey(r.team) === cbTeamKey(m.teamB); });
+    })[0];
+    return {series: ser.name, group: (hit || c.groups[0]), many: c.groups.length > 1};
+  }
+  function pointsTitleFor(m){
+    var cp = !m.isDemo && cbPointsFor(m);
+    if(cp) return cp.series + (cp.many ? " · " + cp.group.name : "") + " — Points table";
+    return POINTS[m.comp] ? m.comp + " — Points table" : "Points table";
+  }
+  async function cbFetchPoints(m){
+    var cbId = m && cbIdFor[m.cricapiId], ser = cbId && cbSeriesOf[cbId];
+    if(!ser) return;
+    var c = cbPointsCache[ser.id];
+    if(c && (c.loading || Date.now() - c.at < (c.groups && c.groups.length ? 30 : 60) * 60000)) return;
+    cbPointsCache[ser.id] = {at: Date.now(), loading: true, groups: c ? c.groups : null};
+    try{
+      var j = await cbFetch("/stats/v1/series/" + ser.id + "/points-table");
+      var groups = ((j && j.pointsTable) || []).map(function(g){
+        return {name: g.groupName || "", rows: (g.pointsTableInfo || []).map(function(r){
+          // Cricbuzz leaves out any number that is zero
+          return {team: r.teamFullName || r.teamName, p: r.matchesPlayed || 0, w: r.matchesWon || 0, l: r.matchesLost || 0,
+            nrr: r.nrr || "", pts: r.points || 0, form: r.form || [], q: /^q/i.test(String(r.teamQualifyStatus || r.qualifyStatus || ""))};
+        })};
+      }).filter(function(g){ return g.rows.length; });
+      cbPointsCache[ser.id] = {at: Date.now(), groups: groups};
+    } catch(err){
+      cbPointsCache[ser.id] = {at: Date.now(), groups: c ? c.groups : null};
+    }
+    if(activeSport === "cricket" && findActiveMatch() === m) renderPoints(m);
+  }
+
   function renderPoints(m){
-    var rows = (POINTS[m.comp] || []).map(function(r){
+    var cp = !m.isDemo && cbPointsFor(m);
+    var src = cp ? cp.group.rows : (POINTS[m.comp] || []);
+    $("pointsTitle").textContent = pointsTitleFor(m);
+    var sub = $("pointsSub");
+    if(sub) sub.textContent = cp ? "" : "Top 4 qualify";
+    var rows = src.map(function(r){
       var form = r.form.map(function(f){ return '<span class="form-dot '+f+'">'+f.toUpperCase()+'</span>'; }).join("");
       return '<tr class="'+(r.q?"qualified":"")+'"><td>'+esc(r.team)+'</td><td>'+r.p+'</td><td>'+r.w+'</td><td>'+r.l+'</td><td>'+r.nrr+'</td><td>'+r.pts+'</td><td><div class="form-dots">'+form+'</div></td></tr>';
     }).join("");
@@ -3361,7 +3416,7 @@
 
   /* ---------------- settings drawer ---------------- */
   var backdrop = $("drawerBackdrop"), drawer = $("drawer");
-  function openDrawer(){ backdrop.classList.add("open"); drawer.classList.add("open"); }
+  function openDrawer(){ backdrop.classList.add("open"); drawer.classList.add("open"); if(typeof cbEnsureUpcoming === "function") cbEnsureUpcoming(); }
   function closeDrawer(){
     backdrop.classList.remove("open"); drawer.classList.remove("open");
     var a = document.activeElement;
@@ -4537,6 +4592,7 @@
   var CB_STALE_MS = 5 * 60000;         // older player data than this isn't shown
   var cbKeys = [], cbQuota = {}, cbIdFor = {}, cbData = {}, cbSlots = {};
   var cbLiveListAt = 0, cbTimer = null, cbStatus = "";
+  var cbSeriesOf = {}, cbPointsCache = {};   // Cricbuzz match id -> series; series id -> points table
 
   function cbKeyLeft(k){
     var q = cbQuota[k];
@@ -4569,6 +4625,7 @@
         continue;
       }
       if(left !== null) cbQuota[k] = {left: +left};
+      if(res.status === 204) return null;
       if(!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
     }
@@ -4596,6 +4653,7 @@
       ids[t1.teamId] = t1.teamName; ids[t2.teamId] = t2.teamName;
       cbTeamNames[e.info.matchId] = ids;
     });
+    entries.forEach(function(e){ cbSeriesOf[e.info.matchId] = {id: e.info.seriesId, name: e.info.seriesName}; });
     cbListMatches = entries.filter(cbIsLive).map(cbToMatch);
     // Indian fixtures first, otherwise Cricbuzz's own order (internationals first)
     cbListMatches.sort(function(a, b){ return /india/i.test(b.teamA + b.teamB) - /india/i.test(a.teamA + a.teamB); });
@@ -4844,6 +4902,7 @@
       pship: ps ? {runs: +ps[1], balls: +ps[2]} : null,
       lastWicketText: cbClean(ms.lastwkt),
       win: wp && wp.team1 && wp.team2 ? [{name: wp.team1.name, pct: wp.team1.percent}, {name: wp.team2.name, pct: wp.team2.percent}] : null,
+      draw: wp && wp.drawtiepercent > 0 ? wp.drawtiepercent : 0,
       comm: comm
     };
   }
@@ -4881,7 +4940,8 @@
     m.lastWicketText = cb.lastWicketText;
     if(cb.win){
       var batting = cb.win.filter(function(w){ return cbTeamKey(w.name) === cbTeamKey(m.battingNow); })[0];
-      if(batting) m.winProb = {batPct: batting.pct, bowlPct: 100 - batting.pct};
+      var bowling = cb.win.filter(function(w){ return w !== batting; })[0];
+      if(batting) m.winProb = {batPct: batting.pct, bowlPct: bowling ? bowling.pct : 100 - batting.pct - (cb.draw || 0), drawPct: cb.draw || 0};
     }
     if(cb.lastBall){
       m._lastBallValue = cb.lastBall;
@@ -4962,7 +5022,14 @@
         if(!cbIdFor[m.cricapiId] && Date.now() - cbLiveListAt > CB_LIST_EVERY_MS) await cbRefreshLiveList();
         var cbId = cbIdFor[m.cricapiId];
         if(cbId){
-          var parsed = parseCricbuzzComm(await cbFetch("/mcenter/v1/" + cbId + "/comm"));
+          var commRaw = await cbFetch("/mcenter/v1/" + cbId + "/comm");
+          var parsed = parseCricbuzzComm(commRaw);
+          if(!parsed){
+            // before the first ball Cricbuzz sends no scoreboard section, but the playing XI is already announced
+            cbFetchTeams(m, cbId);
+            var hs = commRaw && commRaw.matchheaders;
+            cbStatus = "Waiting for the first ball" + (hs && hs.state ? " (" + hs.state + ")" : "");
+          }
           if(parsed){
             cbData[m.cricapiId] = parsed;
             if(m._src === "cricbuzz" && parsed.innings > (m.allInnings || []).length && cbInnSeen[m.cricapiId] !== parsed.innings){
@@ -4975,6 +5042,7 @@
             holdBatterFigures(m);
             cbFetchTeams(m, cbId);
             applyCbTeams(m);
+            cbFetchPoints(m);
             var ovNow = parsed.innings + ":" + parsed.overNo;
             cbFetchScorecard(m, cbId, cbScardOver[m.cricapiId] !== ovNow);   // a new over: refresh now; otherwise at most every 5 min
             cbScardOver[m.cricapiId] = ovNow;
@@ -4997,6 +5065,13 @@
     // no live match on screen (or the countdown is up): no need to ask every 30 s
     var idle = !am || am.isDemo || am.finished || (typeof prematchVisible === "function" && prematchVisible());
     cbTimer = setTimeout(cbTick, cbLeft <= 0 ? 30 * 60000 : idle || cbLeft < CB_LOW_LEFT ? CB_SLOW_POLL_MS : CB_POLL_MS);
+  }
+
+  // switched to another match: fetch its players now instead of waiting for the next 30-second tick
+  function cbKickNow(){
+    if(!cbKeys.length || SCORER_MODE) return;
+    var m = findActiveMatch();
+    if(m && !m.isDemo && !m.finished){ clearTimeout(cbTimer); cbTimer = setTimeout(cbTick, 300); }
   }
 
   // a live match just appeared but Cricbuzz has nothing for it yet: check now instead of waiting a minute
@@ -5535,21 +5610,24 @@
     cbTeamsLoading[cbId] = true;
     try{
       var j = await cbFetch("/mcenter/v1/" + cbId + "/teams");
-      var squads = {}, full = true;
+      var squads = {}, full = true, allXI = true;
       ["team1", "team2"].forEach(function(k){
         var t = j && j[k];
         if(!t || !t.team) return;
         var name = cbSameTeams(t.team.teamname, "", m.teamA, "") ? m.teamA : cbSameTeams(t.team.teamname, "", m.teamB, "") ? m.teamB
           : matchTeamFromInning(t.team.teamname, [m.teamA, m.teamB]);
         var xi = (t.players || []).filter(function(g){ return /playing\s*xi/i.test(g.category || ""); })[0];
-        var list = ((xi && xi.player) || []).map(function(pl){
+        // before the toss Cricbuzz only has the 15-man squad; use it until the XI is announced
+        var group = xi || (t.players || []).filter(function(g){ return /^squad$/i.test(String(g.category || "").trim()); })[0];
+        if(!xi) allXI = false;
+        var list = ((group && group.player) || []).map(function(pl){
           var tag = pl.captain && pl.keeper ? "c & wk" : pl.captain ? "c" : pl.keeper ? "wk" : "";
           return {name: pl.name, role: pl.role || "", tag: tag};
         });
         if(list.length < 11) full = false;
         if(list.length) squads[name] = list;
       });
-      cbTeamsCache[cbId] = {at: Date.now(), squads: squads, full: full && Object.keys(squads).length === 2};
+      cbTeamsCache[cbId] = {at: Date.now(), squads: squads, xi: allXI, full: allXI && full && Object.keys(squads).length === 2};
       applyCbTeams(m);
     } catch(err){
       cbTeamsCache[cbId] = {at: Date.now(), squads: {}, full: false};
@@ -5579,7 +5657,7 @@
   // same shape the CricAPI scorecard parser makes: scorecards[team] = {extras, total, batting[], bowling[]}
   function parseCricbuzzScorecard(j, m){
     var out = {};
-    var live = cbData[m.cricapiId], liveIds = {};
+    var live = cbData[m.cricapiId], liveIds = {}, list = [];
     if(live) [live.striker, live.nonStriker].forEach(function(b){ if(b) liveIds[b.id] = true; });
     ((j && j.scorecard) || []).slice().sort(function(a, b){ return a.inningsid - b.inningsid; }).forEach(function(inn){
       var batting = [], yet = [];
@@ -5598,12 +5676,17 @@
         return {name: w.name || "—", o: w.overs != null ? w.overs : 0, m: w.maidens || 0, r: w.runs || 0, w: w.wickets || 0,
           econ: +w.economy || (w.balls ? +(w.runs * 6 / w.balls).toFixed(2) : 0)};
       });
-      out[cbInningsTeam(inn, m)] = {
+      var team = cbInningsTeam(inn, m);
+      var card = {
         extras: cbExtrasText(inn.extras),
         total: inn.score != null ? inn.score + "/" + (inn.wickets || 0) + " (" + inn.overs + ")" : "",
         batting: batting, bowling: bowling, yetToBat: yet
       };
+      out[team] = card;                                   // the latest innings of each side (what the cards and summary read)
+      list.push({team: team, data: card});
     });
+    // every innings in order, so a Test shows all four (not an enumerable key, so team lookups are unaffected)
+    Object.defineProperty(out, "innings", {value: list, enumerable: false});
     return out;
   }
 
@@ -5636,7 +5719,7 @@
   function applyCbTeams(m){
     var cbId = m && cbIdFor[m.cricapiId];
     var c = cbId && cbTeamsCache[cbId];
-    if(c && Object.keys(c.squads).length){ m.squads = c.squads; m._xi = true; }
+    if(c && Object.keys(c.squads).length){ m.squads = c.squads; m._xi = c.xi !== false; }
   }
 
 
@@ -6066,11 +6149,35 @@
   }
   function hidePrematch(){ var el = $("prematch"); if(el) el.hidden = true; clearInterval(pmTick); }
   function togglePrematch(){ if(prematchVisible()) hidePrematch(); else showPrematch(); }
+  // with no CricAPI key the countdown picker is filled from Cricbuzz (read when Settings opens, at most every 30 min)
+  var cbUpcomingAt = 0;
+  async function cbEnsureUpcoming(){
+    if(!cbKeys.length || cricketKeys.length || SCORER_MODE || Date.now() - cbUpcomingAt < 30 * 60000) return;
+    cbUpcomingAt = Date.now();
+    try{
+      var j = await cbFetch("/matches/v1/upcoming"), list = [];
+      ((j && j.typeMatches) || []).forEach(function(t){
+        (t.seriesMatches || []).forEach(function(sm){
+          var w = sm.seriesAdWrapper;
+          ((w && w.matches) || []).forEach(function(x){
+            var i = x.matchInfo, start = i && +i.startDate;
+            if(!i || !i.team1 || !i.team2 || !start || start < Date.now() - 3600000 || start > Date.now() + 3 * 86400000) return;
+            list.push({name: i.team1.teamName + " vs " + i.team2.teamName + ", " + [i.matchDesc, i.seriesName].filter(Boolean).join(", "),
+              teams: [i.team1.teamName, i.team2.teamName], dateTimeGMT: new Date(start).toISOString(),
+              venue: i.venueInfo ? [i.venueInfo.ground, i.venueInfo.city].filter(Boolean).join(", ") : "", matchStarted: false});
+          });
+        });
+      });
+      list.sort(function(a, b){ return matchStartMs(a.dateTimeGMT) - matchStartMs(b.dateTimeGMT); });
+      cricapiUpcoming = list;
+      fillPrematchSelect();
+    } catch(err){ cbUpcomingAt = 0; }
+  }
   function fillPrematchSelect(){
     var sel = $("pmSelect");
     if(!sel || SCORER_MODE) return;
     var keep = sel.value;
-    sel.innerHTML = '<option value="">Pick an upcoming match (from CricAPI)…</option>' + cricapiUpcoming.map(function(x, i){
+    sel.innerHTML = '<option value="">Pick an upcoming match…</option>' + cricapiUpcoming.map(function(x, i){
       var t = matchStartMs(x.dateTimeGMT);
       return '<option value="' + i + '">' + esc((x.teams || []).join(" vs ") + " · " + new Date(t).toLocaleString([], {weekday: "short", hour: "numeric", minute: "2-digit"})) + '</option>';
     }).join("");
