@@ -1936,7 +1936,7 @@
     </section>
   </div>
 
-  <footer id="pageFooter">Football live scores are pulled in real time from TheSportsDB. Cricket shows demo data unless you add a free CricAPI key in Settings.<br>Waving India flag: <a href="https://www.allwavingflags.com/2018/06/flag-of-india.html" target="_blank" rel="noopener">All Waving Flags</a> (CC BY 4.0). Other flags: flagcdn.com.</footer>
+  <footer id="pageFooter">Football live scores are pulled in real time from TheSportsDB. Cricket shows demo data unless you add a Cricbuzz (RapidAPI) or CricAPI key in Settings.<br>Waving India flag: <a href="https://www.allwavingflags.com/2018/06/flag-of-india.html" target="_blank" rel="noopener">All Waving Flags</a> (CC BY 4.0). Other flags: flagcdn.com.</footer>
 </div>
 
 <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -1950,15 +1950,16 @@
   <hr class="divider">
 
   <h3>Cricket data</h3>
+  <p><b>A Cricbuzz key (the second box below) is enough on its own</b> — it finds the live match and supplies the score, batters, bowler, balls, commentary, win %, playing XI and full scorecard. A CricAPI key is optional; it only adds a second source for the score.</p>
   <p>Browsers can't read Google's scorecards or scrape scoreboard sites directly (CORS blocks it), but cricket data APIs work fine. Sign up free at <b>cricketdata.org/signup.aspx</b> (formerly CricAPI, no card needed) to get a key.</p>
   <p style="margin-top:-8px;">The match on screen refreshes every 10 seconds (about 420 requests an hour, so the 2,000/day plan covers roughly 4½ hours of live play). When fewer than 300 requests are left it slows to once a minute, and when nothing is live it only checks every 5 minutes. A red dot on ⚙ means credits are running low.</p>
   <label class="field-label" for="apiKeyInput">CricAPI / Cricket Data key(s)</label>
   <textarea class="field-input key-input" id="apiKeyInput" rows="3" placeholder="One key, or several — one per line or separated by commas" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn" id="goLiveBtn">Fetch live cricket match</button>
   <button class="btn secondary" id="demoBtn">Stay in demo mode</button>
-  <div class="status-note" id="statusNote">No key saved yet — running on demo data.</div>
-  <label class="field-label" for="cbKeyInput" style="margin-top:16px;">Cricbuzz key via RapidAPI (optional)</label>
-  <p style="margin-top:-4px;">Adds the live batters, bowler, recent balls, real commentary and win % automatically. Free plan: 100 requests/day (about 1h40m at one per minute) — several keys can be pasted, one per line.</p>
+  <div class="status-note" id="statusNote">No CricAPI key saved (optional if you use a Cricbuzz key).</div>
+  <label class="field-label" for="cbKeyInput" style="margin-top:16px;">Cricbuzz key via RapidAPI</label>
+  <p style="margin-top:-4px;">Runs the whole scoreboard by itself: live match list, score, batters, bowler, recent balls, commentary, win %, playing XI and full scorecard (refreshed at the end of every over). About 150 requests an hour. Free plan: 100 requests/day per key — several keys can be pasted, one per line; the Pro plan covers about 21,000 a month.</p>
   <textarea class="field-input key-input" id="cbKeyInput" rows="2" placeholder="X-RapidAPI-Key for cricbuzz-cricket2" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn secondary" id="cbSaveBtn">Save Cricbuzz key</button>
   <div class="status-note" id="cbNote">No Cricbuzz key — player cards come from the Scorer.</div>
@@ -2986,7 +2987,7 @@
 
     var bt = $("battingTable");
     if(!data.batting.length){
-      bt.innerHTML = '<tr><td style="border:none;color:var(--text-faint);padding:10px 0;">'+(m.isDemo ? "Yet to bat" : "Detailed scorecard not provided by this live feed")+'</td></tr>';
+      bt.innerHTML = '<tr><td style="border:none;color:var(--text-faint);padding:10px 0;">'+(m.isDemo ? "Yet to bat" : cbCoversScorecard(m) ? "Loading the scorecard from Cricbuzz…" : "Detailed scorecard not provided by this live feed")+'</td></tr>';
     } else {
       var rows = data.batting.map(function(b){
         return '<tr><td class="name-cell"><span>'+esc(b.name)+(b.strike?'<span class="strike-mark">●</span>':'')+'</span><span class="dismissal">'+esc(b.dismissal)+'</span></td>' +
@@ -2994,13 +2995,14 @@
       }).join("");
       bt.innerHTML =
         '<tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>' + rows +
+        (data.yetToBat && data.yetToBat.length ? '<tr class="extras-row"><td>Yet to bat</td><td colspan="5" style="text-align:left;">'+esc(data.yetToBat.join(", "))+'</td></tr>' : '') +
         '<tr class="extras-row"><td>Extras</td><td colspan="5" style="text-align:left;">'+esc(data.extras)+'</td></tr>' +
         '<tr class="total-row"><td>Total</td><td colspan="5" style="text-align:left;">'+esc(data.total)+'</td></tr>';
     }
 
     var bw = $("bowlingTable");
     if(!data.bowling.length){
-      bw.innerHTML = '<tr><td style="border:none;color:var(--text-faint);padding:10px 0;">'+(m.isDemo ? "No overs bowled yet" : "Not provided by this live feed")+'</td></tr>';
+      bw.innerHTML = '<tr><td style="border:none;color:var(--text-faint);padding:10px 0;">'+(m.isDemo ? "No overs bowled yet" : cbCoversScorecard(m) ? "Loading…" : "Not provided by this live feed")+'</td></tr>';
     } else {
       var brows = data.bowling.map(function(b){
         return '<tr><td>'+esc(b.name)+'</td><td>'+b.o+'</td><td>'+b.m+'</td><td>'+b.r+'</td><td>'+b.w+'</td><td>'+b.econ.toFixed(2)+'</td></tr>';
@@ -3605,7 +3607,7 @@
   var SCORECARD_REFRESH_MS = 15 * 60000;
 
   async function fetchMatchScorecard(m){
-    if(!m.fantasyEnabled || !m.cricapiId || !cricketKeys.length) return;
+    if(!m.fantasyEnabled || !m.cricapiId || !cricketKeys.length || cbCoversScorecard(m)) return;
     var state = scorecardFetchState[m.cricapiId];
     if(state === "loading" || state === "unavailable") return;
     var cached = scorecardCache[m.cricapiId];
@@ -3765,8 +3767,12 @@
     if(!raw || !raw.id || raw.matchEnded) return false;
     var nm = mapCricapiGuarded(raw);
     if(raw.scorecard && raw.scorecard.length){
-      nm.scorecards = parseCricapiScorecard(raw, nm);
-      scorecardCache[m.cricapiId] = {data: nm.scorecards, at: Date.now()};
+      var cbSc = scorecardCache[m.cricapiId];
+      // keep Cricbuzz's scorecard while it's fresh; CricAPI's still feeds the ball tracker
+      if(!(cbSc && cbSc.src === "cricbuzz" && Date.now() - cbSc.at < 2 * CB_SCARD_MAX_AGE_MS)){
+        nm.scorecards = parseCricapiScorecard(raw, nm);
+        scorecardCache[m.cricapiId] = {data: nm.scorecards, at: Date.now()};
+      }
       trackCricapiBalls(m.cricapiId, raw);
     }
     cricapiMatches[idx] = nm;
@@ -4969,6 +4975,9 @@
             holdBatterFigures(m);
             cbFetchTeams(m, cbId);
             applyCbTeams(m);
+            var ovNow = parsed.innings + ":" + parsed.overNo;
+            cbFetchScorecard(m, cbId, cbScardOver[m.cricapiId] !== ovNow);   // a new over: refresh now; otherwise at most every 5 min
+            cbScardOver[m.cricapiId] = ovNow;
             renderCricket();
             cbStatus = "Live players on (updated " + new Date().toLocaleTimeString() + ")";
           }
@@ -5548,6 +5557,82 @@
       cbTeamsLoading[cbId] = false;
     }
   }
+  /* ---------------- full scorecard from Cricbuzz (/mcenter/v1/{id}/scard) ---------------- */
+  var CB_SCARD_MAX_AGE_MS = 5 * 60000;
+  var cbScardLoading = {}, cbScardOver = {};
+
+  function cbExtrasText(e){
+    if(!e || !(e.total > 0)) return "—";
+    var parts = [["b", e.byes], ["lb", e.legbyes], ["w", e.wides], ["nb", e.noballs], ["pen", e.penalty]]
+      .filter(function(x){ return x[1] > 0; }).map(function(x){ return x[0] + " " + x[1]; });
+    return e.total + (parts.length ? " (" + parts.join(", ") + ")" : "");
+  }
+  function cbInningsTeam(inn, m){
+    var n = cbTeamKey(inn.batteamname), sh = String(inn.batteamsname || "").toUpperCase();
+    if(n && n === cbTeamKey(m.teamA)) return m.teamA;
+    if(n && n === cbTeamKey(m.teamB)) return m.teamB;
+    if(sh && sh === teamCode(m.teamA).toUpperCase()) return m.teamA;
+    if(sh && sh === teamCode(m.teamB).toUpperCase()) return m.teamB;
+    return matchTeamFromInning(inn.batteamname || "", [m.teamA, m.teamB]);
+  }
+
+  // same shape the CricAPI scorecard parser makes: scorecards[team] = {extras, total, batting[], bowling[]}
+  function parseCricbuzzScorecard(j, m){
+    var out = {};
+    var live = cbData[m.cricapiId], liveIds = {};
+    if(live) [live.striker, live.nonStriker].forEach(function(b){ if(b) liveIds[b.id] = true; });
+    ((j && j.scorecard) || []).slice().sort(function(a, b){ return a.inningsid - b.inningsid; }).forEach(function(inn){
+      var batting = [], yet = [];
+      (inn.batsman || []).forEach(function(b){
+        var outText = String(b.outdec || "").trim();
+        var faced = (b.balls || 0) > 0 || (b.runs || 0) > 0;
+        // an empty "how out" with no balls faced is a player who hasn't batted; with balls it's a batter still in
+        if(!outText && !faced && !liveIds[b.id]){ yet.push(b.name); return; }
+        batting.push({
+          name: b.name || "—", dismissal: /^not out$/i.test(outText) ? "not out" : (outText || "batting"),
+          r: b.runs || 0, b: b.balls || 0, fours: b.fours || 0, six: b.sixes || 0,
+          sr: +b.strkrate || (b.balls ? +(b.runs * 100 / b.balls).toFixed(1) : 0)
+        });
+      });
+      var bowling = (inn.bowler || []).map(function(w){
+        return {name: w.name || "—", o: w.overs != null ? w.overs : 0, m: w.maidens || 0, r: w.runs || 0, w: w.wickets || 0,
+          econ: +w.economy || (w.balls ? +(w.runs * 6 / w.balls).toFixed(2) : 0)};
+      });
+      out[cbInningsTeam(inn, m)] = {
+        extras: cbExtrasText(inn.extras),
+        total: inn.score != null ? inn.score + "/" + (inn.wickets || 0) + " (" + inn.overs + ")" : "",
+        batting: batting, bowling: bowling, yetToBat: yet
+      };
+    });
+    return out;
+  }
+
+  async function cbFetchScorecard(m, cbId, force){
+    if(!cbId || !m || m.isDemo) return;
+    var c = scorecardCache[m.cricapiId];
+    // fresh enough: 5 min, or 10 min when Cricbuzz requests are running low
+    var maxAge = cbRequestsLeft() < CB_LOW_LEFT ? 2 * CB_SCARD_MAX_AGE_MS : CB_SCARD_MAX_AGE_MS;
+    if(cbScardLoading[cbId] || (!force && c && Date.now() - c.at < maxAge)) return;
+    cbScardLoading[cbId] = true;
+    try{
+      var sc = parseCricbuzzScorecard(await cbFetch("/mcenter/v1/" + cbId + "/scard"), m);
+      if(Object.keys(sc).length){
+        scorecardCache[m.cricapiId] = {data: sc, at: Date.now(), src: "cricbuzz"};
+        m.scorecards = sc;
+        if(activeSport === "cricket" && activeId === m.id) renderScorecard(m);
+      } else if(!c){
+        // nothing posted yet (match just started): look again in a minute rather than at the next tick
+        scorecardCache[m.cricapiId] = {data: {}, at: Date.now() - maxAge + 60000, src: "cricbuzz"};
+      }
+    } catch(err){
+      /* keep whatever scorecard we already have */
+    } finally {
+      cbScardLoading[cbId] = false;
+    }
+  }
+  // is the scorecard of this match coming from Cricbuzz? (then CricAPI's scorecard calls are skipped to save credits)
+  function cbCoversScorecard(m){ return !!(cbKeys.length && m && cbIdFor[m.cricapiId]); }
+
   function applyCbTeams(m){
     var cbId = m && cbIdFor[m.cricapiId];
     var c = cbId && cbTeamsCache[cbId];
@@ -5773,7 +5858,10 @@
           if(am && am.cricapiId && scorecardCache[am.cricapiId]) am.scorecards = scorecardCache[am.cricapiId].data;
           if(!showBreak("result")) showBreak("summary");
         };
-        if(m.cricapiId && m.fantasyEnabled && cricketKeys.length){
+        if(cbCoversScorecard(m)){
+          // read the final scorecard from Cricbuzz first, so top scorer / best bowler are the final figures
+          Promise.resolve(cbFetchScorecard(m, cbIdFor[m.cricapiId], true)).then(function(){ setTimeout(showResult, 2500); }, function(){ setTimeout(showResult, 2500); });
+        } else if(m.cricapiId && m.fantasyEnabled && cricketKeys.length){
           // read the final scorecard first, so top scorer / best bowler are the final figures
           delete scorecardCache[m.cricapiId];
           scorecardFetchState[m.cricapiId] = "idle";
