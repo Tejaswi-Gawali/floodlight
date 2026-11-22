@@ -1961,8 +1961,8 @@
   <button class="btn secondary" id="demoBtn">Stay in demo mode</button>
   <div class="status-note" id="statusNote">No CricAPI key saved (optional if you use a Cricbuzz key).</div>
   <label class="field-label" for="cbKeyInput" style="margin-top:16px;">Cricbuzz key via RapidAPI</label>
-  <p style="margin-top:-4px;">Runs the whole scoreboard by itself: live match list, score, batters, bowler, recent balls, commentary, win %, playing XI and full scorecard (refreshed at the end of every over). About 150 requests an hour. Free plan: 100 requests/day per key — several keys can be pasted, one per line; the Pro plan covers about 21,000 a month.</p>
-  <textarea class="field-input key-input" id="cbKeyInput" rows="2" placeholder="X-RapidAPI-Key for cricbuzz-cricket2" autocomplete="off" spellcheck="false"></textarea>
+  <p style="margin-top:-4px;">Runs the whole scoreboard by itself: live match list, score, batters, bowler, recent balls, commentary, win %, playing XI and full scorecard (refreshed at the end of every over). About 150 requests an hour during play, far fewer at breaks and stumps. Works with either Cricbuzz API on RapidAPI (cricbuzz-cricket or cricbuzz-cricket2) — each key is tried on both. Paste several keys, one per line: free daily allowances are used first and a monthly plan (Pro) is kept for when they run out. Press Save again after buying a plan.</p>
+  <textarea class="field-input key-input" id="cbKeyInput" rows="2" placeholder="X-RapidAPI-Key (one per line)" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn secondary" id="cbSaveBtn">Save Cricbuzz key</button>
   <div class="status-note" id="cbNote">No Cricbuzz key — player cards come from the Scorer.</div>
   <label class="check-row"><input type="checkbox" id="cbTextToggle"> Also show Cricbuzz's own commentary sentences</label>
@@ -4584,47 +4584,94 @@
   }
 
   /* ---------------- Cricbuzz (RapidAPI): live batters, bowler, balls, commentary, win % ---------------- */
-  var CB_HOST = "cricbuzz-cricket2.p.rapidapi.com";
+  // the same Cricbuzz data is sold on RapidAPI under two names; every key is tried on both, so a plan bought on either works
+  var CB_HOSTS = ["cricbuzz-cricket2.p.rapidapi.com", "cricbuzz-cricket.p.rapidapi.com"];
   var CB_POLL_MS = 30000;          // Cricbuzz ball-by-ball (players, recent balls) every 30 s...
-  var CB_SLOW_POLL_MS = 60000;     // ...once a minute when fewer than CB_LOW_LEFT requests are left today
+  var CB_SLOW_POLL_MS = 60000;     // ...once a minute when fewer than CB_LOW_LEFT requests are left
+  var CB_BREAK_POLL_MS = 2 * 60000;    // lunch, tea, drinks, innings break, rain, toss: every 2 min
+  var CB_STUMPS_POLL_MS = 10 * 60000;  // close of play in a multi-day match: every 10 min
+  var CB_BREAK_RE = /lunch|tea|dinner|drink|innings break|rain|delay|wet|bad light|toss/i;
   var CB_LOW_LEFT = 80;
   var CB_LIST_EVERY_MS = 5 * 60000;    // re-read Cricbuzz's live list (new matches, other scores) every 5 min
   var CB_STALE_MS = 5 * 60000;         // older player data than this isn't shown
-  var cbKeys = [], cbQuota = {}, cbIdFor = {}, cbData = {}, cbSlots = {};
+  var cbKeys = [], cbQuota = {}, cbIdFor = {}, cbData = {}, cbSlots = {}, cbPlayState = "";
+  // what each key has left on each API, kept across reloads: {"host|key": {left, limit, resetAt, off, nosub}}
+  var CB_QUOTA_STORE = "floodlight_cb_quota";
+  try { cbQuota = JSON.parse(localStorage.getItem(CB_QUOTA_STORE) || "{}") || {}; } catch(e){ cbQuota = {}; }
   var cbLiveListAt = 0, cbTimer = null, cbStatus = "";
   var cbSeriesOf = {}, cbPointsCache = {};   // Cricbuzz match id -> series; series id -> points table
 
-  function cbKeyLeft(k){
-    var q = cbQuota[k];
-    if(!q) return 100;
-    if(q.retryAt) return Date.now() >= q.retryAt ? 1 : 0;
+  function cbSlotList(){
+    var out = [];
+    cbKeys.forEach(function(k){ CB_HOSTS.forEach(function(h){ out.push({key: k, host: h, id: h + "|" + k}); }); });
+    return out;
+  }
+  function cbSaveQuota(){
+    var keep = {};
+    cbSlotList().forEach(function(sl){ if(cbQuota[sl.id]) keep[sl.id] = cbQuota[sl.id]; });
+    try { localStorage.setItem(CB_QUOTA_STORE, JSON.stringify(keep)); } catch(e){}
+    renderCbNote();
+  }
+  function cbSlotLeft(sl){
+    var q = cbQuota[sl.id];
+    if(!q) return 100;                                                // not used yet
+    if(q.off) return Date.now() >= q.off ? 1 : 0;                     // parked: try once more when the wait is over
+    if(q.resetAt && Date.now() >= q.resetAt) return q.limit || 100;   // its allowance has renewed since
     return q.left;
   }
-  function pickCbKey(exclude){
-    var best = null, bestLeft = 0;
-    cbKeys.forEach(function(k){
-      if(exclude.indexOf(k) !== -1) return;
-      var left = cbKeyLeft(k);
-      if(left > bestLeft){ best = k; bestLeft = left; }
-    });
-    return best;
+  // a daily allowance is use-it-or-lose-it, so it goes first; a monthly plan (Pro) is kept for when those run out
+  function cbSlotDaily(sl){
+    var q = cbQuota[sl.id];
+    if(q && q.resetAt && Date.now() < q.resetAt) return q.resetAt - Date.now() < 25 * 3600000;
+    return sl.host === CB_HOSTS[0];   // cricbuzz-cricket2's free plan is 100 a day
   }
-  function cbRequestsLeft(){ return cbKeys.reduce(function(sum, k){ return sum + cbKeyLeft(k); }, 0); }
+  function pickCbSlot(tried){
+    var best = null;
+    cbSlotList().forEach(function(sl){
+      if(tried.indexOf(sl.id) !== -1) return;
+      var left = cbSlotLeft(sl);
+      if(left <= 0) return;
+      var rank = (cbSlotDaily(sl) ? 1e9 : 0) + left;
+      if(!best || rank > best.rank) best = {slot: sl, rank: rank};
+    });
+    return best && best.slot;
+  }
+  function cbRequestsLeft(){ return cbSlotList().reduce(function(sum, sl){ return sum + cbSlotLeft(sl); }, 0); }
+  function cbLeftText(){
+    var day = 0, month = 0, hasDay = false, hasMonth = false;
+    cbSlotList().forEach(function(sl){
+      var q = cbQuota[sl.id];
+      if(!q || q.nosub) return;
+      if(cbSlotDaily(sl)){ day += cbSlotLeft(sl); hasDay = true; } else { month += cbSlotLeft(sl); hasMonth = true; }
+    });
+    var parts = [];
+    if(hasDay) parts.push(day + " free Cricbuzz requests left today");
+    if(hasMonth) parts.push(month.toLocaleString() + " left this month on your plan");
+    return parts.join(" · ") || "checking your Cricbuzz key";
+  }
 
   async function cbFetch(path){
     var tried = [];
     for(;;){
-      var k = pickCbKey(tried);
-      if(!k) throw new Error(cbKeys.length ? "no requests left today" : "no key");
-      var res = await fetchT("https://" + CB_HOST + path, {headers: {"x-rapidapi-key": k, "x-rapidapi-host": CB_HOST}}, 10000);
-      var left = res.headers.get("x-ratelimit-requests-remaining");
+      var sl = pickCbSlot(tried);
+      if(!sl) throw new Error(cbKeys.length ? "no Cricbuzz requests left" : "no key");
+      tried.push(sl.id);
+      var res = await fetchT("https://" + sl.host + path, {headers: {"x-rapidapi-key": sl.key, "x-rapidapi-host": sl.host}}, 10000);
+      var q = cbQuota[sl.id] || {};
       if(res.status === 429 || res.status === 401 || res.status === 403){
-        // over quota or key rejected: park it for an hour and try the next key
-        cbQuota[k] = {left: 0, retryAt: Date.now() + 3600000};
-        tried.push(k);
+        // not subscribed to this one of the two APIs: skip it for a day; over quota or rejected: park it for an hour
+        var nosub = false;
+        if(res.status === 403){ try { nosub = /not subscribed/i.test((await res.json()).message || ""); } catch(e){} }
+        cbQuota[sl.id] = Object.assign({}, q, {left: 0, off: Date.now() + (nosub ? 24 : 1) * 3600000, nosub: nosub});
+        cbSaveQuota();
         continue;
       }
-      if(left !== null) cbQuota[k] = {left: +left};
+      var left = res.headers.get("x-ratelimit-requests-remaining");
+      if(left !== null){
+        var limit = res.headers.get("x-ratelimit-requests-limit"), reset = res.headers.get("x-ratelimit-requests-reset");
+        cbQuota[sl.id] = {left: +left, limit: limit !== null ? +limit : q.limit, resetAt: reset !== null ? Date.now() + reset * 1000 : q.resetAt};
+        cbSaveQuota();
+      }
       if(res.status === 204) return null;
       if(!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
@@ -5011,11 +5058,12 @@
     var el = $("cbNote");
     if(!cbKeys.length){ el.className = "status-note"; el.textContent = "No Cricbuzz key — player cards come from the Scorer."; return; }
     el.className = "status-note" + (cbStatus.indexOf("Couldn't") === 0 ? " err" : " ok");
-    el.textContent = cbStatus + (cbStatus ? " · " : "") + cbRequestsLeft() + " Cricbuzz requests left today" + (cbKeys.length > 1 ? " across " + cbKeys.length + " keys" : "");
+    el.textContent = cbStatus + (cbStatus ? " · " : "") + cbLeftText();
   }
 
   async function cbTick(){
     clearTimeout(cbTimer);
+    cbPlayState = "";
     try{
       var m = activeSport === "cricket" ? findActiveMatch() : null;
       if(cbKeys.length && m && !m.isDemo && !m.finished && m.cricapiId){
@@ -5023,6 +5071,8 @@
         var cbId = cbIdFor[m.cricapiId];
         if(cbId){
           var commRaw = await cbFetch("/mcenter/v1/" + cbId + "/comm");
+          cbPlayState = String((commRaw && commRaw.matchheaders && commRaw.matchheaders.state) || "");
+          var atBreak = /stumps/i.test(cbPlayState) || CB_BREAK_RE.test(cbPlayState);
           var parsed = parseCricbuzzComm(commRaw);
           if(!parsed){
             // before the first ball Cricbuzz sends no scoreboard section, but the playing XI is already announced
@@ -5044,7 +5094,9 @@
             applyCbTeams(m);
             cbFetchPoints(m);
             var ovNow = parsed.innings + ":" + parsed.overNo;
-            cbFetchScorecard(m, cbId, cbScardOver[m.cricapiId] !== ovNow);   // a new over: refresh now; otherwise at most every 5 min
+            var newOver = cbScardOver[m.cricapiId] !== ovNow;
+            // a new over: refresh now; otherwise at most every 5 min (not at all during a break, once we have it)
+            if(newOver || !atBreak || !scorecardCache[m.cricapiId]) cbFetchScorecard(m, cbId, newOver);
             cbScardOver[m.cricapiId] = ovNow;
             renderCricket();
             cbStatus = "Live players on (updated " + new Date().toLocaleTimeString() + ")";
@@ -5064,7 +5116,9 @@
     var am = findActiveMatch();
     // no live match on screen (or the countdown is up): no need to ask every 30 s
     var idle = !am || am.isDemo || am.finished || (typeof prematchVisible === "function" && prematchVisible());
-    cbTimer = setTimeout(cbTick, cbLeft <= 0 ? 30 * 60000 : idle || cbLeft < CB_LOW_LEFT ? CB_SLOW_POLL_MS : CB_POLL_MS);
+    // stumps / lunch / tea / rain: nothing changes for a while, so look less often
+    var breakMs = /stumps/i.test(cbPlayState) ? CB_STUMPS_POLL_MS : CB_BREAK_RE.test(cbPlayState) ? CB_BREAK_POLL_MS : 0;
+    cbTimer = setTimeout(cbTick, cbLeft <= 0 ? 30 * 60000 : breakMs || (idle || cbLeft < CB_LOW_LEFT ? CB_SLOW_POLL_MS : CB_POLL_MS));
   }
 
   // switched to another match: fetch its players now instead of waiting for the next 30-second tick
@@ -5081,8 +5135,10 @@
     if(m && !m.isDemo && !cbFreshData(m)){ clearTimeout(cbTimer); cbTimer = setTimeout(cbTick, 800); }
   }
 
-  function startCricbuzz(raw){
+  function startCricbuzz(raw, fresh){
     cbKeys = parseKeys(raw);
+    // pressing Save (e.g. right after buying a plan) forgets what each key had left and checks them all again
+    if(fresh){ cbQuota = {}; cbSaveQuota(); }
     renderCbNote();
     clearTimeout(cbTimer);
     clearTimeout(cbListTimer);
@@ -5109,7 +5165,7 @@
     var raw = parseKeys($("cbKeyInput").value).join("\n");
     $("cbKeyInput").value = raw;
     try { if(raw) localStorage.setItem("floodlight_rapidapi_key", raw); else localStorage.removeItem("floodlight_rapidapi_key"); } catch(e){}
-    startCricbuzz(raw);
+    startCricbuzz(raw, true);
   });
   if(!SCORER_MODE) startCricbuzz(savedCbKey);
 
@@ -5988,7 +6044,7 @@
       var hl = Math.floor(c.cricapi / 60), ml = c.cricapi % 60;
       msgs.push("⚠ CricAPI: only " + c.cricapi + " requests left today — score now refreshes once a minute (about " + (hl ? hl + "h " : "") + ml + " min left).");
     }
-    if(c.cricbuzz != null && c.cricbuzz < 40) msgs.push("⚠ Cricbuzz: only " + c.cricbuzz + " requests left today — player cards and recent balls stop updating when they run out.");
+    if(c.cricbuzz != null && c.cricbuzz < 40) msgs.push("⚠ Cricbuzz: only " + c.cricbuzz + " requests left — the score and player cards stop updating when they run out.");
     el.hidden = !msgs.length;
     el.textContent = msgs.join("  ");
     $("settingsBtn").classList.toggle("has-warn", msgs.length > 0);
