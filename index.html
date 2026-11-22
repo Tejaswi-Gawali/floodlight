@@ -4865,8 +4865,12 @@
   }
 
   // open on the senior India match first; age-group, A-team and women's sides and matches at stumps come after
+  // ?match=india a vs pakistan a  pins that fixture on screen (for the OBS link, where nothing can be clicked); words are matched loosely
+  var pinnedTeams = [];
+  try { var pinParam = new URLSearchParams(window.location.search).get("match"); if(pinParam) pinnedTeams = pinParam.split(/\s+vs\.?\s+|[,|]/i).map(cbTeamKey).filter(Boolean); } catch(e){}
   function matchPriority(m){
     var names = m.teamA + " " + m.teamB, p = m.finished ? -1 : 0;
+    if(pinnedTeams.length){ var key = cbTeamKey(names); if(pinnedTeams.every(function(t){ return key.indexOf(t) !== -1; })) p += 100; }
     if(/\bindia\b/i.test(names)) p += 4;
     if(/u-?19|u-?23|women|emerging|legends|masters/i.test(names) || /\bA$|\bA\b/.test(names)) p -= 3;
     if(/stumps|abandon|no result/i.test(m.sub || "")) p -= 2;
@@ -6317,7 +6321,8 @@
   // dark → mid → light; "label" is the colour of the big BOWLING / TARGET word when that team is fielding
   var TEAM_COLORS = {
     "india":       {c1: "#8a3a00", c2: "#ff7a00", c3: "#c85a00", label: "#ffffff", labelShadow: "#5a2400"},
-    "new zealand": {c1: "#000000", c2: "#2b2b2b", c3: "#0d0d0d", label: "#ffab1f", labelShadow: "#000000"}
+    "new zealand": {c1: "#000000", c2: "#2b2b2b", c3: "#0d0d0d", label: "#ffab1f", labelShadow: "#000000"},
+    "pakistan":    {c1: "#01411c", c2: "#0f8a3c", c3: "#0a5c28", label: "#ffffff", labelShadow: "#022b12"}
   };
   function teamColors(team){
     var key = String(team || "").toLowerCase().replace(/\s*\b(women|men|u-?19|u-?23|a|xi)\b\s*$/i, "").trim();
