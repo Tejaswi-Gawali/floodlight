@@ -1954,7 +1954,7 @@
   <h3>Cricket data</h3>
   <p><b>A Cricbuzz key (the second box below) is enough on its own</b> — it finds the live match and supplies the score, batters, bowler, balls, commentary, win %, playing XI and full scorecard. A CricAPI key is optional; it only adds a second source for the score.</p>
   <p>Browsers can't read Google's scorecards or scrape scoreboard sites directly (CORS blocks it), but cricket data APIs work fine. Sign up free at <b>cricketdata.org/signup.aspx</b> (formerly CricAPI, no card needed) to get a key.</p>
-  <p style="margin-top:-8px;">The match on screen refreshes every 10 seconds (about 420 requests an hour, so the 2,000/day plan covers roughly 4½ hours of live play). When fewer than 300 requests are left it slows to once a minute, and when nothing is live it only checks every 5 minutes. A red dot on ⚙ means credits are running low.</p>
+  <p style="margin-top:-8px;">Only needed if you have no Cricbuzz key. With a CricAPI key the match on screen refreshes every 10 seconds (about 420 requests an hour). When fewer than 300 requests are left it slows to once a minute, and when nothing is live it only checks every 5 minutes. To stop using CricAPI, empty this box and press the button. A red dot on ⚙ means credits are running low.</p>
   <label class="field-label" for="apiKeyInput">CricAPI / Cricket Data key(s)</label>
   <textarea class="field-input key-input" id="apiKeyInput" rows="3" placeholder="One key, or several — one per line or separated by commas" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn" id="goLiveBtn">Fetch live cricket match</button>
@@ -3888,7 +3888,7 @@
       return true;
     } catch(err){
       note.className = "status-note err";
-      note.textContent = "Couldn't fetch live data (" + err.message + "). " + (silent ? "Will retry on the next cycle." : "Staying on demo data.");
+      note.textContent = "Couldn't fetch live data (" + err.message + "). " + (cbKeys.length ? "Cricbuzz is running the scoreboard — CricAPI isn't needed; empty this box and press the button to stop using it." : silent ? "Will retry on the next cycle." : "Staying on demo data.");
       return false;
     }
   }
@@ -3906,6 +3906,15 @@
     var key = $("apiKeyInput").value.trim();
     var note = $("statusNote");
     if(!key){
+      // an empty box removes the CricAPI keys; Cricbuzz (if set) carries on by itself
+      try { localStorage.removeItem("floodlight_cricapi_key"); } catch(e){}
+      if(cricketKeys.length){
+        stopCricketPolling();
+        cricketKeys = []; cricketPollKey = null; cricapiMatches = []; cricapiAt = 0;
+        rebuildRealMatches();
+        if(activeSport === "cricket") renderCricket();
+        renderCreditWarn();
+      }
       note.className = "status-note err";
       if(cbKeys.length){
         note.className = "status-note ok";
@@ -6039,7 +6048,7 @@
     var el = $("creditWarn");
     if(!el) return;
     var c = creditNumbers(), msgs = [];
-    if(c.cricapi != null && c.cricapi < 300){
+    if(c.cricapi != null && c.cricapi < 300 && c.cricbuzz == null){
       // below 300 the score refreshes once a minute, so requests left ≈ minutes left
       var hl = Math.floor(c.cricapi / 60), ml = c.cricapi % 60;
       msgs.push("⚠ CricAPI: only " + c.cricapi + " requests left today — score now refreshes once a minute (about " + (hl ? hl + "h " : "") + ml + " min left).");
