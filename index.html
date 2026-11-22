@@ -4938,6 +4938,13 @@
       return {id: b.id, name: b.name, runs: b.runs || 0, balls: b.balls || 0, fours: b.fours || 0, six: b.sixes || 0};
     }
     var bw = ms.bowlerstriker;
+    var bowlerOvers = bw ? String(bw.overs) : "";
+    if(bw && /^\d+(\.\d)?$/.test(bowlerOvers)){
+      // the bowler of this over has bowled exactly the balls of this over; Cricbuzz's own text can be a ball behind
+      var bparts = bowlerOvers.split("."), bwhole = +bparts[0], bfrac = +(bparts[1] || 0);
+      if(inOver > 0 && bfrac < inOver) bowlerOvers = bwhole + "." + inOver;
+      else if(inOver === 0 && legal > 0 && bfrac > 0) bowlerOvers = String(bwhole + 1);
+    }
     var ball = comms.filter(function(c){ return c.commtxt && c.overnum > 0; })[0] || null;
     var comm = null;
     if(ball){
@@ -4956,7 +4963,7 @@
       }),
       score: cur ? {runs: cur.runs, wkts: cur.wickets, balls: legal} : null,
       striker: bat(ms.batsmanstriker), nonStriker: bat(ms.batsmannonstriker),
-      bowler: bw && bw.name ? {name: bw.name, stat: bw.overs + "-" + (bw.maidens || 0) + "-" + (bw.runs || 0) + "-" + (bw.wickets || 0), econ: +bw.economy || 0} : null,
+      bowler: bw && bw.name ? {name: bw.name, stat: bowlerOvers + "-" + (bw.maidens || 0) + "-" + (bw.runs || 0) + "-" + (bw.wickets || 0), econ: +bw.economy || 0} : null,
       thisOver: thisOver, prevOver: prevOver, overNo: done,
       lastBall: (thisOver.length ? thisOver : prevOver).slice(-1)[0] || null,
       pship: ps ? {runs: +ps[1], balls: +ps[2]} : null,
@@ -5063,6 +5070,14 @@
         m.rrr = m.ballsRemaining ? +(Math.max(m.target - m.score.runs, 0) * 6 / m.ballsRemaining).toFixed(2) : null;
       }
     }
+    // the match list can be a ball ahead of the ball-by-ball: keep the bowler's overs in step with the over counter shown
+    if(cb.bowler && cb.score && m.score && cb.innings === (m.allInnings || []).length){
+      var shown = oversToBalls(m.score.overs), ahead = shown - cb.score.balls;
+      if(ahead > 0 && Math.floor(shown / 6) === Math.floor(cb.score.balls / 6) && shown % 6 > 0){
+        var bp = String(cb.bowler.stat).split("-");
+        m.bowler = {name: cb.bowler.name, econ: cb.bowler.econ, stat: Math.floor(+bp[0]) + "." + (shown % 6) + "-" + bp.slice(1).join("-")};
+      }
+    }
     m._autoPlayers = true;
     return m;
   }
@@ -5094,7 +5109,12 @@
             cbStatus = "Waiting for the first ball" + (hs && hs.state ? " (" + hs.state + ")" : "");
           }
           if(parsed){
+            var prevCb = cbData[m.cricapiId];
             cbData[m.cricapiId] = parsed;
+            if(prevCb && prevCb.score && parsed.score && prevCb.score.balls === parsed.score.balls && prevCb.innings === parsed.innings
+               && !atBreak && Date.now() - cbLiveListAt > 25000){
+              cbRefreshLiveList().catch(function(){});   // nothing new in the ball-by-ball: the list may already have the next ball
+            }
             if(m._src === "cricbuzz" && parsed.innings > (m.allInnings || []).length && cbInnSeen[m.cricapiId] !== parsed.innings){
               cbInnSeen[m.cricapiId] = parsed.innings;
               cbDiscoverTick();
