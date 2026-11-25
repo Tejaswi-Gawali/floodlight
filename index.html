@@ -1961,7 +1961,7 @@
   <button class="btn secondary" id="demoBtn">Stay in demo mode</button>
   <div class="status-note" id="statusNote">No CricAPI key saved (optional if you use a Cricbuzz key).</div>
   <label class="field-label" for="cbKeyInput" style="margin-top:16px;">Cricbuzz key via RapidAPI</label>
-  <p style="margin-top:-4px;">Runs the whole scoreboard by itself: live match list, score, batters, bowler, recent balls, commentary, win %, playing XI and full scorecard (refreshed at the end of every over). About 270 requests an hour during play (score every 15 seconds), far fewer at breaks and stumps. Works with either Cricbuzz API on RapidAPI (cricbuzz-cricket or cricbuzz-cricket2) — each key is tried on both. Paste several keys, one per line: free daily allowances are used first and a monthly plan (Pro) is kept for when they run out. Press Save again after buying a plan.</p>
+  <p style="margin-top:-4px;">Runs the whole scoreboard by itself: live match list, score, batters, bowler, recent balls, commentary, win %, playing XI and full scorecard (refreshed at the end of every over). About 150 requests an hour during play (score every 30 seconds), far fewer at breaks and stumps. Works with either Cricbuzz API on RapidAPI (cricbuzz-cricket or cricbuzz-cricket2) — each key is tried on both. Paste several keys, one per line: free daily allowances are used first and a monthly plan (Pro) is kept for when they run out. Press Save again after buying a plan.</p>
   <textarea class="field-input key-input" id="cbKeyInput" rows="2" placeholder="X-RapidAPI-Key (one per line)" autocomplete="off" spellcheck="false"></textarea>
   <button class="btn secondary" id="cbSaveBtn">Save Cricbuzz key</button>
   <div class="status-note" id="cbNote">No Cricbuzz key — player cards come from the Scorer.</div>
@@ -4595,7 +4595,7 @@
   /* ---------------- Cricbuzz (RapidAPI): live batters, bowler, balls, commentary, win % ---------------- */
   // the same Cricbuzz data is sold on RapidAPI under two names; every key is tried on both, so a plan bought on either works
   var CB_HOSTS = ["cricbuzz-cricket2.p.rapidapi.com", "cricbuzz-cricket.p.rapidapi.com"];
-  var CB_POLL_MS = 15000;          // Cricbuzz ball-by-ball (score, players, recent balls) every 15 s...
+  var CB_POLL_MS = 30000;          // Cricbuzz ball-by-ball (score, players, recent balls) every 30 s...
   var CB_SLOW_POLL_MS = 60000;     // ...once a minute when fewer than CB_LOW_LEFT requests are left
   var CB_BREAK_POLL_MS = 2 * 60000;    // lunch, tea, drinks, innings break, rain, toss: every 2 min
   var CB_STUMPS_POLL_MS = 10 * 60000;  // close of play in a multi-day match: every 10 min
@@ -5147,7 +5147,7 @@
     // with no Cricbuzz requests left, check back less often
     var cbLeft = cbRequestsLeft();
     var am = findActiveMatch();
-    // no live match on screen (or the countdown is up): no need to ask every 15 s
+    // no live match on screen (or the countdown is up): no need to ask every 30 s
     var idle = !am || am.isDemo || am.finished || (typeof prematchVisible === "function" && prematchVisible());
     // stumps / lunch / tea / rain: nothing changes for a while, so look less often
     var breakMs = /stumps/i.test(cbPlayState) ? CB_STUMPS_POLL_MS : CB_BREAK_RE.test(cbPlayState) ? CB_BREAK_POLL_MS : 0;
