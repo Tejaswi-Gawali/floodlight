@@ -4645,6 +4645,11 @@
     });
     return best && best.slot;
   }
+  function cbSoonestRetryMs(){
+    var soon = Infinity;
+    cbSlotList().forEach(function(sl){ var q = cbQuota[sl.id]; if(q && q.off && q.off > Date.now() && !q.nosub) soon = Math.min(soon, q.off - Date.now()); });
+    return Math.min(Math.max(soon === Infinity ? 60000 : soon, 30000), 5 * 60000);
+  }
   function cbRequestsLeft(){ return cbSlotList().reduce(function(sum, sl){ return sum + cbSlotLeft(sl); }, 0); }
   function cbLeftText(){
     var day = 0, month = 0, hasDay = false, hasMonth = false;
@@ -4668,10 +4673,17 @@
       var res = await fetchT("https://" + sl.host + path, {headers: {"x-rapidapi-key": sl.key, "x-rapidapi-host": sl.host}}, 10000);
       var q = cbQuota[sl.id] || {};
       if(res.status === 429 || res.status === 401 || res.status === 403){
-        // not subscribed to this one of the two APIs: skip it for a day; over quota or rejected: park it for an hour
-        var nosub = false;
-        if(res.status === 403){ try { nosub = /not subscribed/i.test((await res.json()).message || ""); } catch(e){} }
-        cbQuota[sl.id] = Object.assign({}, q, {left: 0, off: Date.now() + (nosub ? 24 : 1) * 3600000, nosub: nosub});
+        // not subscribed to this one of the two APIs: skip it for a day; allowance used up: until it renews;
+        // a momentary "too many requests" or other refusal: only a short pause, so one hiccup can't silence a key for an hour
+        var msg = "", nosub = false;
+        try { msg = String((await res.json()).message || ""); } catch(e){}
+        nosub = /not subscribed/i.test(msg);
+        var rst = +res.headers.get("x-ratelimit-requests-reset"), waitMs;
+        if(nosub) waitMs = 24 * 3600000;
+        else if(/quota|exceeded the (daily|monthly)/i.test(msg)) waitMs = Math.min(Math.max(rst > 0 ? rst * 1000 : 3600000, 5 * 60000), 24 * 3600000);
+        else if(res.status === 429) waitMs = 20000;
+        else waitMs = 10 * 60000;
+        cbQuota[sl.id] = Object.assign({}, q, {left: 0, off: Date.now() + waitMs, nosub: nosub});
         cbSaveQuota();
         continue;
       }
@@ -4886,7 +4898,7 @@
     if(!cbKeys.length || SCORER_MODE) return;
     try { await cbRefreshLiveList(); }
     catch(err){ cbStatus = "Couldn't reach Cricbuzz (" + err.message + ")"; renderCbNote(); }
-    cbListTimer = setTimeout(cbDiscoverTick, cbRequestsLeft() > 0 ? CB_LIST_EVERY_MS : 30 * 60000);
+    cbListTimer = setTimeout(cbDiscoverTick, cbRequestsLeft() > 0 ? CB_LIST_EVERY_MS : cbSoonestRetryMs());
   }
 
   // Cricbuzz over strings look like "0 1 4 W Wd N4 L1 B2"
@@ -5151,7 +5163,7 @@
     var idle = !am || am.isDemo || am.finished || (typeof prematchVisible === "function" && prematchVisible());
     // stumps / lunch / tea / rain: nothing changes for a while, so look less often
     var breakMs = /stumps/i.test(cbPlayState) ? CB_STUMPS_POLL_MS : CB_BREAK_RE.test(cbPlayState) ? CB_BREAK_POLL_MS : 0;
-    cbTimer = setTimeout(cbTick, cbLeft <= 0 ? 30 * 60000 : breakMs || (idle || cbLeft < CB_LOW_LEFT ? CB_SLOW_POLL_MS : CB_POLL_MS));
+    cbTimer = setTimeout(cbTick, cbLeft <= 0 ? cbSoonestRetryMs() : breakMs || (idle || cbLeft < CB_LOW_LEFT ? CB_SLOW_POLL_MS : CB_POLL_MS));
   }
 
   // switched to another match: fetch its players now instead of waiting for the next 30-second tick
